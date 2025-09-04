@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id('id_cuota_servicio');
             $table->unsignedBigInteger('id_cuota');
             $table->unsignedBigInteger('id_servicio');
+	    $table->decimal('importe', 10, 2)->default(0);
 
             // Relaciones
             $table->foreign('id_cuota')->references('id_cuota')->on('cuotas');
