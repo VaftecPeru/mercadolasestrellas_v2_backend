@@ -24,12 +24,24 @@ class CuotaController extends Controller
     public function index(Request $request)
     {
         $per_page = $request->get('per_page', 15);
-        $query = Cuota::query();
+        $query = Cuota::with(['deudas', 'servicios.servicio']);
 
-        if ($request->has('anio')) {
+
+        // Validación de parámetros opcionales
+        $validator = Validator::make($request->all(), [
+            'anio' => 'nullable|digits:4',
+            'mes' => 'nullable|digits:2',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => 'Parámetros "anio" o "mes" inválidos. Formato esperado: anio=YYYY, mes=MM'], 400);
+        }
+
+        if ($request->filled('anio')) {
             $query->whereRaw(Util::compareDateYear('fecha_emision', $request->anio));
         }
-        if ($request->has('mes')) {
+
+        if ($request->filled('mes')) {
             $query->whereRaw(Util::compareDateMonth('fecha_emision', $request->mes));
         }
 
@@ -69,16 +81,14 @@ class CuotaController extends Controller
 
         DB::beginTransaction();
 
-        // Crear la cuota global primero
         $cuota = new Cuota();
         $cuota->fecha_emision = $request->fecha_emision;
         $cuota->fecha_vencimiento = $request->fecha_vencimiento;
         $cuota->global = true;
         $cuota->importe = 0;
-        $cuota->save(); // Guardamos primero para obtener el id_cuota
+        $cuota->save();
 
         foreach ($listado as $socio) {
-            // Crear deuda asociada a la cuota
             $deuda = new Deuda();
             $deuda->id_socio = $socio->id_socio;
             $deuda->id_puesto = $socio->id_puesto;
@@ -88,20 +98,19 @@ class CuotaController extends Controller
             $deuda->save();
 
             foreach ($servicios as $servicio) {
-                $costo_servicio = $servicio->tipo_servicio == 3 ? $servicio->costo_unitario * $socio->area : $servicio->costo_unitario;
+                $costo_servicio = $servicio->tipo_servicio == 3
+                    ? $servicio->costo_unitario * $socio->area
+                    : $servicio->costo_unitario;
 
-                // Crear relación cuota-servicio
                 $cuota_servicio = new CuotaServicios();
                 $cuota_servicio->id_cuota = $cuota->id_cuota;
                 $cuota_servicio->id_servicio = $servicio->id_servicio;
                 $cuota_servicio->importe = $costo_servicio;
                 $cuota_servicio->save();
 
-                // Actualizar importes
                 $cuota->increment('importe', $costo_servicio);
                 $deuda->increment('total_deuda', $costo_servicio);
 
-                // Registrar cuota de deuda
                 $deuda_cuota = new DeudaCuota();
                 $deuda_cuota->id_deuda = $deuda->id_deuda;
                 $deuda_cuota->id_cuota_servicio = $cuota_servicio->id_cuota_servicio;
@@ -150,15 +159,13 @@ class CuotaController extends Controller
 
         DB::beginTransaction();
 
-        // Crear cuota individual primero
         $cuota = new Cuota();
         $cuota->fecha_emision = $request->fecha_emision;
         $cuota->fecha_vencimiento = $request->fecha_vencimiento;
         $cuota->global = false;
         $cuota->importe = 0;
-        $cuota->save(); // Guardamos primero para obtener el id_cuota
+        $cuota->save();
 
-        // Crear deuda asociada a la cuota
         $deuda = new Deuda();
         $deuda->id_socio = $socio->id_socio;
         $deuda->id_puesto = $puesto->id_puesto;
@@ -168,7 +175,9 @@ class CuotaController extends Controller
         $deuda->save();
 
         foreach ($servicios as $servicio) {
-            $costo_servicio = $servicio->tipo_servicio == 3 ? $servicio->costo_unitario * $socio->area : $servicio->costo_unitario;
+            $costo_servicio = $servicio->tipo_servicio == 3
+                ? $servicio->costo_unitario * $socio->area
+                : $servicio->costo_unitario;
 
             $cuota_servicio = new CuotaServicios();
             $cuota_servicio->id_cuota = $cuota->id_cuota;

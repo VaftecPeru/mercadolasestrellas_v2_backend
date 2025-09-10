@@ -22,12 +22,17 @@ class Cuota extends Model
 
     public function deudas()
     {
-        return $this->belongsToMany(Deuda::class, 'deuda_cuotas', 'id_cuota', 'id_deuda');
+        return $this->hasMany(\App\Models\Deuda::class, 'id_cuota');
     }
 
     public function cuotaServicios()
     {
         return $this->hasMany(CuotaServicios::class, 'id_cuota');
+    }
+
+    public function servicios()
+    {
+        return $this->cuotaServicios()->with('servicio');
     }
 
     public function puestosCuota()

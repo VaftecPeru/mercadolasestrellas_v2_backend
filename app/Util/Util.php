@@ -4,14 +4,22 @@ namespace App\Util;
 
 class Util
 {
-    public static function compareDateYear($fecha,$anho)
+    public static function compareDateYear($fecha, $anho)
     {
-        return "year($fecha) = $anho";
+        if (!is_numeric($anho) || strlen($anho) !== 4) {
+            throw new \InvalidArgumentException("Año inválido: $anho");
+        }
+
+        return "YEAR($fecha) = " . intval($anho);
     }
 
-    public static function compareDateMonth($fecha,$mes)
+    public static function compareDateMonth($fecha, $mes)
     {
-        return "month($fecha) = $mes";
+        if (!is_numeric($mes) || intval($mes) < 1 || intval($mes) > 12) {
+            throw new \InvalidArgumentException("Mes inválido: $mes");
+        }
+
+        return "MONTH($fecha) = " . intval($mes);
     }
 
     public static function sumaColArrayObjFormat($arrayObject, $columna)
