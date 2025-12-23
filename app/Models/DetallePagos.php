@@ -20,31 +20,33 @@ class DetallePagos extends Model
         'id_puesto',
         'importe',
         'id_servicio',
-        'id_deuda_cuota'
+        'id_deuda_cuota',
     ];
 
+    // Relaciones
     public function Pago()
     {
-        return $this->belongsTo(Pago::class,'id_pago');
+        return $this->belongsTo(Pago::class, 'id_pago', 'id_pago');
     }
 
     public function Cuota()
     {
-        return $this->belongsTo(Cuota::class,'id_cuota');
+        return $this->belongsTo(Cuota::class, 'id_cuota', 'id_cuota');
     }
 
     public function Deuda()
     {
-        return $this->belongsTo(Deuda::class,'id_deuda');
+        return $this->belongsTo(Deuda::class, 'id_deuda', 'id_deuda');
     }
 
     public function Puesto()
     {
-        return $this->belongsTo(Puesto::class,'id_puesto');
+        return $this->belongsTo(Puesto::class, 'id_puesto', 'id_puesto');
     }
 
     public function Servicio()
     {
-        return $this->belongsTo(Servicio::class,'id_servicio');
+        return $this->belongsTo(Servicio::class, 'id_servicio', 'id_servicio');
     }
 }
+

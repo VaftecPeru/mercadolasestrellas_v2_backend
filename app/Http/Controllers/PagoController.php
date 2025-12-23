@@ -24,13 +24,9 @@ use Illuminate\Support\Facades\Validator;
 
 class PagoController extends Controller
 {
-
-    public function index()
+    public function index(Request $request)
     {
-        $per_page = 15;
-        if (isset($request->per_page)) {
-            $per_page = $request->per_page;
-        }
+        $per_page = $request->per_page ?? 15;
         $paginate = Pago::orderBy('fecha_registro', 'desc')->paginate($per_page);
 
         return new PagoCollection($paginate);
@@ -40,11 +36,13 @@ class PagoController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'id_socio' => 'required',
+            'id_documento' => 'nullable',
             'deudas' => 'required|array|min:1',
             'deudas.*.id_deuda_cuota' => 'required',
             'deudas.*.importe' => 'required|numeric|min:0|not_in:0',
         ], [
             'id_socio.required' => 'El id del socio es requerido.',
+            'id_documento.required' => 'El documento es requerido.',
             'deudas.required' => 'No se han seleccionado deudas.',
             'deudas.*.id_deuda_cuota.required' => 'No se recibió el id de la deuda.',
             'deudas.*.importe.required' => 'No se recibió el importe de la deuda.',
@@ -54,8 +52,8 @@ class PagoController extends Controller
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()->first()], 400);
         }
-        
-        $documento = Documento::find(1);
+
+        $documento = Documento::find($request->id_documento ?? 1);
         if (!$documento) {
             return response()->json(['error' => 'No se encontro el documento.'], 400);
         }
@@ -64,9 +62,7 @@ class PagoController extends Controller
 
         foreach ($request->input('deudas') as $deuda_value) {
             $deudaCuota = DeudaCuota::find($deuda_value['id_deuda_cuota']);
-            $importe_a_cuenta = DetallePagos::select('detalle_pagos.*')
-                ->where('id_deuda_cuota',$deuda_value['id_deuda_cuota'])
-                ->sum("importe");
+            $importe_a_cuenta = DetallePagos::where('id_deuda_cuota',$deuda_value['id_deuda_cuota'])->sum("importe");
             $importe_a_cuenta = $importe_a_cuenta ?? 0;
             $resto_de_deuda = $deudaCuota->monto - $importe_a_cuenta;
 
@@ -84,12 +80,12 @@ class PagoController extends Controller
         $documento->numero_documento = $numeroDocumentoNuevo;
         $documento->update();
 
-        $numero_pago_nueno = str_pad($numeroDocumentoNuevo, 8, '0', STR_PAD_LEFT);
+        $numero_pago_nuevo = str_pad($numeroDocumentoNuevo, 8, '0', STR_PAD_LEFT);
 
         $pago = new Pago();
         $pago->id_socio = $request->input('id_socio');
-        $pago->id_documento = 1;
-        $pago->numero_pago = $numero_pago_nueno;
+        $pago->id_documento = $documento->id_documento;
+        $pago->numero_pago = $numero_pago_nuevo;
         $pago->serie = $documento->serie;
         $pago->total_pago = 0;
         $pago->fecha_registro = Carbon::now();
@@ -123,6 +119,7 @@ class PagoController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'id_socio' => 'required',
+            'id_documento' => 'nullable',
             'id_banco' => 'required',
             'id_bancocuenta' => 'required',
             'numero_operacion' => 'required',
@@ -132,6 +129,7 @@ class PagoController extends Controller
             'deudas.*.importe' => 'required|numeric|min:0|not_in:0',
         ], [
             'id_socio.required' => 'El socio es requerido.',
+            'id_documento.required' => 'El documento es requerido.',
             'id_banco.required' => 'El banco es requerido.',
             'id_bancocuenta.required' => 'La cuenta es requerido.',
             'numero_operacion.required' => 'El número de operación es requerido.',
@@ -145,8 +143,8 @@ class PagoController extends Controller
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()->first()], 400);
         }
-        
-        $documento = Documento::find(1);
+
+        $documento = Documento::find($request->id_documento ?? 1);
         if (!$documento) {
             return response()->json(['error' => 'No se encontro el documento.'], 400);
         }
@@ -155,9 +153,7 @@ class PagoController extends Controller
 
         foreach ($request->input('deudas') as $deuda_value) {
             $deudaCuota = DeudaCuota::find($deuda_value['id_deuda_cuota']);
-            $importe_a_cuenta = DetallePagos::select('detalle_pagos.*')
-                ->where('id_deuda_cuota',$deuda_value['id_deuda_cuota'])
-                ->sum("importe");
+            $importe_a_cuenta = DetallePagos::where('id_deuda_cuota',$deuda_value['id_deuda_cuota'])->sum("importe");
             $importe_a_cuenta = $importe_a_cuenta ?? 0;
             $resto_de_deuda = $deudaCuota->monto - $importe_a_cuenta;
 
@@ -175,12 +171,12 @@ class PagoController extends Controller
         $documento->numero_documento = $numeroDocumentoNuevo;
         $documento->update();
 
-        $numero_pago_nueno = str_pad($numeroDocumentoNuevo, 8, '0', STR_PAD_LEFT);
+        $numero_pago_nuevo = str_pad($numeroDocumentoNuevo, 8, '0', STR_PAD_LEFT);
 
         $pago = new Pago();
         $pago->id_socio = $request->input('id_socio');
-        $pago->id_documento = 1;
-        $pago->numero_pago = $numero_pago_nueno;
+        $pago->id_documento = $documento->id_documento;
+        $pago->numero_pago = $numero_pago_nuevo;
         $pago->serie = $documento->serie;
         $pago->total_pago = 0;
         $pago->fecha_registro = Carbon::now();
@@ -220,8 +216,12 @@ class PagoController extends Controller
 
     public function ListaDeudaCuotas($id_puesto)
     {
-        // Obtener las deudas cuotas asociadas al id_puesto
-        $deuda_cuota = DeudaCuota::select('deuda_cuotas.a_cuenta', 'cuotas.fecha_registro', 'servicios.descripcion as servicio', 'cuotas.importe')
+        $deuda_cuota = DeudaCuota::select(
+                'deuda_cuotas.a_cuenta',
+                'cuotas.fecha_registro',
+                'servicios.descripcion as servicio',
+                'cuotas.importe'
+            )
             ->join('cuotas', 'deuda_cuotas.id_cuota', '=', 'cuotas.id_cuota')
             ->join('puesto_cuotas', 'cuotas.id_cuota', '=', 'puesto_cuotas.id_cuota')
             ->join('servicios', 'cuotas.id_servicio', '=', 'servicios.id_servicio')
@@ -242,3 +242,4 @@ class PagoController extends Controller
         return $export->generatePDF();
     }
 }
+
