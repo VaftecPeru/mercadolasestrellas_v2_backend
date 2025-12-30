@@ -33,7 +33,6 @@ class BlockController extends Controller
             return response()->json(["error" => $validator->errors()->first()], 400);
         }
 
-        // Crear un nuevo bloque
         $block = new Block();
         $block->nombre = $request->input('nombre');
         $block->save();

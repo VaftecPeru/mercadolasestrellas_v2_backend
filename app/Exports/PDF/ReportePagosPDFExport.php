@@ -4,40 +4,61 @@ namespace App\Exports\PDF;
 
 use App\Models\Pago;
 use App\Models\Socio;
+use App\Models\Puesto;
 use Barryvdh\DomPDF\PDF;
 
 class ReportePagosPDFExport {
 
-    public function generatePDF($id_socio) {
+    public function generatePDF($filtro_id) {
 
-        $socio = Socio::find($id_socio);
-        $nombre_socio = $socio->usuario->nombre_usuario;
+        $nombre_reporte = "";
+        $query = Pago::query();
 
-        $pagos = Pago::where('id_socio', $id_socio)
-            ->get()
-            ->map(function ($pago) {
+        if (request()->has('id_puesto') && request()->id_puesto != "") {
+            $puesto = Puesto::find($filtro_id);
+            $nombre_reporte = "Puesto: " . ($puesto->numero_puesto ?? $filtro_id);
+            $query->whereHas('DetallePagos', function($q) use ($filtro_id) {
+                $q->where('id_puesto', $filtro_id);
+            });
+        } else {
+            $socio = Socio::find($filtro_id);
+            $nombre_reporte = "Socio: " . ($socio->nombres ?? "Socio") . " " . ($socio->apellido_paterno ?? "");
+            $query->where('id_socio', $filtro_id);
+        }
+
+        $meses = [
+            1 => 'ENERO', 2 => 'FEBRERO', 3 => 'MARZO', 4 => 'ABRIL',
+            5 => 'MAYO', 6 => 'JUNIO', 7 => 'JULIO', 8 => 'AGOSTO',
+            9 => 'SEPTIEMBRE', 10 => 'OCTUBRE', 11 => 'NOVIEMBRE', 12 => 'DICIEMBRE'
+        ];
+
+        $pagos = $query->get()
+            ->map(function ($pago) use ($meses) {
+                $fecha = \Carbon\Carbon::parse($pago->fecha_registro);
                 return [
+                    'anio' => $fecha->year,
+                    'mes' => $meses[$fecha->month],
                     'numero' => $pago->numero_pago,
                     'serie_numero' => $pago->serie.'-'.$pago->numero_pago,
-                    'fecha' => $pago->fecha_registro,
+                    'fecha' => $fecha->format('Y-m-d'),
                     'aporte' => $pago->total_pago,
                     'total' => $pago->total_pago,
-                    'detalle_pagos' => $pago->detallePagos->map(function ($detalle) {
-                            return $detalle->servicio->nombre . ': ' . $detalle->importe;
-                        })->join('\n'), // Une los detalles en una sola cadena
-                    'detalles' => $pago->detallePagos->map(function ($detalle) {
+                    'detalle_pagos' => $pago->DetallePagos->map(function ($detalle) {
+                            return ($detalle->servicio->nombre ?? 'Servicio') . ': ' . $detalle->importe;
+                        })->join('\n'),
+                    'detalles' => $pago->DetallePagos->map(function ($detalle) {
                             return [
-                                'servicio_nombre' => $detalle->servicio->nombre,
+                                'servicio_nombre' => $detalle->servicio->nombre ?? 'Servicio',
                                 'importe' => $detalle->importe,
                             ];
                         }),
                 ];
             });
 
-        $total = Pago::where('id_socio', $id_socio)->sum('total_pago');
+        $total = $query->sum('total_pago');
 
         $pdf = app(PDF::class)->loadView('exports.reporte_pagos', [
-            'nombre_socio' => $nombre_socio,
+            'nombre_socio' => $nombre_reporte,
             'pagos' => $pagos, 
             'total' => $total, 
         ]);

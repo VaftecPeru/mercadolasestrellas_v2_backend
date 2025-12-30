@@ -10,18 +10,14 @@ use Illuminate\Support\Facades\Validator;
 
 class InquilinoController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+   
     public function index()
     {
         $inquilinos = Inquilino::all();
         return new InquilinoCollection($inquilinos);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
+   
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -61,9 +57,7 @@ class InquilinoController extends Controller
         return response()->json(["data"=>$inquilino,"message"=>"Inquilino registrado correctamente"]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
+  
     public function update(Request $request, $id_inquilino)
     {
         $validator = Validator::make($request->all(), [
@@ -103,9 +97,7 @@ class InquilinoController extends Controller
         return response()->json(["data"=>$inquilino,"message"=>"Los datos del inquilino fueron actualizados correctamente"]);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
+   
     public function destroy($id_inquilino)
     {
         $inquilino = Inquilino::find($id_inquilino);
@@ -114,7 +106,7 @@ class InquilinoController extends Controller
             return response()->json(["error" => "El puesto no cuenta con inquilinos"], 400);
         }
 
-        // Eliminar inquilino del puesto
+        
         $puesto = Puesto::where('id_inquilino', $id_inquilino)->first();
         $puesto->id_inquilino = null;
         $puesto->update();

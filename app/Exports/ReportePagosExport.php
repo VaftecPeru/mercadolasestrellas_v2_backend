@@ -14,88 +14,106 @@ use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class ReportePagosExport implements FromCollection, WithHeadings, WithStyles, WithEvents, WithColumnFormatting
 {
-    protected $id_socio;
+    
+    protected $filtro_id;
     private $count = 0;
 
-    public function __construct($id_socio)
+    public function __construct($filtro_id)
     {
-        $this->id_socio = $id_socio;
+        $this->filtro_id = $filtro_id;
     }
 
     public function collection()
     {
-        $pagos = Pago::where('id_socio', $this->id_socio)
-            ->get()
-            ->map(function ($pago) {
-                return [
-                    'numero' => $pago->numero_pago,
-                    'serie_numero' => $pago->serie.'-'.$pago->numero_pago,
-                    'fecha' => $pago->fecha_registro,
-                    'aporte' => $pago->total_pago,
-                    'total' => $pago->total_pago,
-                    'detalle_pagos' => $pago->detallePagos->map(function ($detalle) {
-                            return $detalle->servicio->nombre . ': ' . $detalle->importe;
-                        })->join('\n'), // Une los detalles en una sola cadena
-                ];
-            });
+        $query = Pago::query();
 
-        $this->count = count($pagos);
-        return $pagos;
+        if (request()->has('id_puesto') && request()->id_puesto != "") {
+            $query->whereHas('DetallePagos', function($q) {
+                $q->where('id_puesto', $this->filtro_id);
+            });
+        } else {
+            $query->where('id_socio', $this->filtro_id);
+        }
+
+        $pagosMap = $query->with(['DetallePagos.servicio']) 
+            ->get();
+
+        $rows = [];
+        $meses = [
+            1 => 'ENERO', 2 => 'FEBRERO', 3 => 'MARZO', 4 => 'ABRIL',
+            5 => 'MAYO', 6 => 'JUNIO', 7 => 'JULIO', 8 => 'AGOSTO',
+            9 => 'SEPTIEMBRE', 10 => 'OCTUBRE', 11 => 'NOVIEMBRE', 12 => 'DICIEMBRE'
+        ];
+
+        foreach ($pagosMap as $pago) {
+            $fecha = \Carbon\Carbon::parse($pago->fecha_registro);
+            $anio = $fecha->year;
+            $mes = $meses[$fecha->month];
+            $fechaFmt = $fecha->format('Y-m-d');
+            
+            $detalles = $pago->DetallePagos;
+            $countDetalles = count($detalles);
+
+            foreach ($detalles as $index => $detalle) {
+                $rows[] = [
+                    'anio'      => $anio,
+                    'mes'       => $mes,
+                    'fecha'     => $fechaFmt,
+                    'servicio'  => $detalle->servicio->nombre ?? 'Servicio',
+                    'monto'     => $detalle->importe,
+                    'total'     => ($index === $countDetalles - 1) ? $pago->total_pago : null,
+                ];
+            }
+        }
+
+        $this->count = count($rows);
+        return collect($rows);
     }
 
     public function headings(): array
     {
         return [
-            'N° Pago',
-            'N° Serie',
-            'Fecha de Pago',
-            'Aporte (S/.)',
-            'Total (S/.)',
-            'Detalle Pago',
+            'Año',
+            'Mes',
+            'Fec. Pago',
+            'Servicios',
+            'Monto (S/)',
+            'Pago (S/)',
         ];
     }
 
     public function columnFormats(): array
     {
-        return[
-            // 'D' => NumberFormat::FORMAT_DATE_DATETIME,
-            // 'E' => NumberFormat::FORMAT_DATE_DATETIME
-            'D' => NumberFormat::FORMAT_NUMBER_00,
-            'E' => NumberFormat::FORMAT_NUMBER_00
+        return [
+            'E' => NumberFormat::FORMAT_NUMBER_00,
+            'F' => NumberFormat::FORMAT_NUMBER_00
         ];
     }
 
     public function styles(Worksheet $sheet)
     {
-        // Aplicar negrita a la primera fila (encabezados)
+        
         $sheet->getStyle(1)->getFont()->setBold(true);
 
-        // Ajustar automáticamente el ancho de las columnas
         foreach (range('A', 'F') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
-
-        // $sheet->getColumnDimension('D'.($this->count + 1))->setAutoSize(true);
-        // $sheet->getStyle('B2')->getFont()->setBold(true);
-        // $objPHPExcel->getActiveSheet()->mergeCells('A1:E1');
-        $sheet->mergeCells('A'.($this->count + 2).':C'.($this->count + 2));
-        // $event->sheet->getStyle('A:B')->getAlignment()->setHorizontal('center');
-        $sheet->getStyle('A'.($this->count + 2))->getAlignment()->setHorizontal('center');
-        $sheet->getStyle('A'.($this->count + 2))->getFont()->setBold(true);
-        $sheet->getStyle('D'.($this->count + 2))->getFont()->setBold(true);
-        $sheet->getStyle('E'.($this->count + 2))->getFont()->setBold(true);
     }
 
     public function registerEvents(): array
     {
         return [
             AfterSheet::class => function(AfterSheet $event) {
-                $lastRow = $event->sheet->getHighestRow();
-                $event->sheet->getStyle(1)->getFont()->setBold(true);
-                // $event->sheet->setCellValue('E'. ($event->sheet->getHighestRow()+1), '=SUM(E2:E'.$event->sheet->getHighestRow().')');
-                $event->sheet->setCellValue('A'. ($lastRow), 'TOTAL:');
-                $event->sheet->setCellValue('D'. ($lastRow), '=SUM(D2:D'.($lastRow-1).')');
-                $event->sheet->setCellValue('E'. ($lastRow), '=SUM(E2:E'.($lastRow-1).')');
+                if ($this->count > 0) {
+                    $lastRow = $event->sheet->getHighestRow() + 1;
+                    $event->sheet->setCellValue('A' . ($lastRow), 'TOTAL GENERAL:');
+                    $event->sheet->mergeCells("A{$lastRow}:E{$lastRow}");
+                    $event->sheet->getStyle("A{$lastRow}")->getAlignment()->setHorizontal('right');
+                    $event->sheet->getStyle("A{$lastRow}:F{$lastRow}")->getFont()->setBold(true);
+                    
+                    // Sumatoria solo de la columna F (Pago S/)
+                    $event->sheet->setCellValue('F' . ($lastRow), '=SUM(F2:F' . ($lastRow - 1) . ')');
+                }
             }
         ];
     }

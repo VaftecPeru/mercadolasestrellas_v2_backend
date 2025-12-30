@@ -47,42 +47,35 @@
   <table>
     <thead>
       <tr>
-        <th>Nro. Pago</th>
-        <th>Nro. Serie</th>
-        <th>Fecha de Pago</th>
-        <th>Aporte(S/.)</th>
-        <th>Total(S/.)</th>
-        <th colspan="2">Detalle del Pago</th>
+        <th>Año</th>
+        <th>Mes</th>
+        <th>Fec. Pago</th>
+        <th>Servicios</th>
+        <th>Monto (S/.)</th>
+        <th>Pago (S/.)</th>
       </tr>
     </thead>
     <tbody>
       @foreach($pagos as $pago)
-        <tr>
-          <td rowspan="{{ count($pago['detalles']) }}">{{ $pago['numero'] }}</td>
-          <td rowspan="{{ count($pago['detalles']) }}">{{ $pago['serie_numero'] }}</td>
-          <td rowspan="{{ count($pago['detalles']) }}">{{ $pago['fecha'] }}</td>
-          <td rowspan="{{ count($pago['detalles']) }}" class="right">{{ $pago['aporte'] }}</td>
-          <td rowspan="{{ count($pago['detalles']) }}" class="right">{{ $pago['total'] }}</td>
-          <td>{{ $pago['detalles'][0]['servicio_nombre'] }}</td>
-          <td class="right">{{ $pago['detalles'][0]['importe'] }}</td>
-        </tr>
+        @php $pagoCount = count($pago['detalles']); @endphp
         @foreach($pago['detalles'] as $key => $detalle)
-          @if ($key != 0)
-            <tr>
-              <td>{{ $detalle['servicio_nombre'] }}</td>
-              <td class="right">{{ $detalle['importe'] }}</td>
-            </tr>
-          @endif
+          <tr>
+            <td align="center">{{ $pago['anio'] }}</td>
+            <td align="center">{{ $pago['mes'] }}</td>
+            <td align="center">{{ $pago['fecha'] }}</td>
+            <td>{{ $detalle['servicio_nombre'] }}</td>
+            <td class="right">{{ number_format($detalle['importe'], 2) }}</td>
+            <td class="right" style="background-color: #fafafa; font-weight: bold;">
+              {{ $key === $pagoCount - 1 ? 'S/ ' . number_format($pago['total'], 2) : '' }}
+            </td>
+          </tr>
         @endforeach
       @endforeach
     </tbody>
     <tfoot>
       <tr>
-        <th colspan="3">Total(S/.)</th>
-        <th class="right">{{ $total }}</th>
-        <th class="right">{{ $total }}</th>
-        <th></th>
-        <th class="right">{{ $total }}</th>
+        <th colspan="5" class="right">TOTAL GENERAL:</th>
+        <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total, 2) }}</th>
       </tr>
     </tfoot>
   </table>

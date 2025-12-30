@@ -28,33 +28,44 @@ class ReporteController extends Controller
 {
     public function pagos(Request $request)
     {
-        $per_page = 15;
-        if (isset($request->per_page)) {
-            $per_page = $request->per_page;
-        }
-        $paginate = Pago::where('id_socio', $request->id_socio)
-            ->paginate($per_page);
+        $per_page = $request->get('per_page', 15);
+        
+        $query = Pago::query();
 
-        return new ReportePagoCollection($paginate);
+        if ($request->has('id_puesto') && $request->id_puesto != "") {
+            $query->whereHas('DetallePagos', function($q) use ($request) {
+                $q->where('id_puesto', $request->id_puesto);
+            });
+        } elseif ($request->has('id_socio') && $request->id_socio != "") {
+            $query->where('id_socio', $request->id_socio);
+        }
+
+        $total_general = $query->sum('total_pago');
+        $paginate = $query->paginate($per_page);
+
+        return (new ReportePagoCollection($paginate))->additional([
+            'total_general' => $total_general
+        ]);
     }
 
     public function exportReportePagos(Request $request)
     {
-        return Excel::download(new ReportePagosExport($request->id_socio), 'reporte_pagos.xlsx');
+       
+        $filtro = $request->id_puesto ?? $request->id_socio;
+        return Excel::download(new ReportePagosExport($filtro), 'reporte_pagos.xlsx');
     }
 
     public function exportReportePagosPDF(Request $request)
     {
         $export = new ReportePagosPDFExport();
-        return $export->generatePDF($request->id_socio);
+        $filtro = $request->id_puesto ?? $request->id_socio;
+        return $export->generatePDF($filtro);
     }
 
     public function deudas(Request $request)
     {
-        $per_page = 15;
-        if (isset($request->per_page)) {
-            $per_page = $request->per_page;
-        }
+        $per_page = $request->get('per_page', 15);
+        
         $paginate = Deuda::where('id_puesto', $request->id_puesto)
             ->paginate($per_page);
 
@@ -74,14 +85,9 @@ class ReporteController extends Controller
 
     public function cuotaPorMetros(Request $request)
     {
-        $per_page = 15;
-        if (isset($request->per_page)) {
-            $per_page = $request->per_page;
-        }
-        $id_cuota = 0;
-        if (isset($request->id_cuota)) {
-            $id_cuota = $request->id_cuota;
-        }
+        $per_page = $request->get('per_page', 15);
+        $id_cuota = $request->get('id_cuota', 0);
+        
         $paginate = Deuda::whereIn('id_deuda', function($query) use($id_cuota) {
                 $query->select('a.id_deuda')
                 ->from('deuda_cuotas as a')
@@ -106,10 +112,8 @@ class ReporteController extends Controller
 
     public function cuotaPorPuestos(Request $request)
     {
-        $per_page = 15;
-        if (isset($request->per_page)) {
-            $per_page = $request->per_page;
-        }
+        $per_page = $request->get('per_page', 15);
+        
         $paginate = Deuda::where('id_puesto', $request->id_puesto)
             ->paginate($per_page);
 
@@ -129,10 +133,7 @@ class ReporteController extends Controller
 
     public function resumenPorPuestos(Request $request)
     {
-        $per_page = 15;
-        if (isset($request->per_page)) {
-            $per_page = $request->per_page;
-        }
+        $per_page = $request->get('per_page', 15);
 
         $paginate = DetallePagos::select(
                 'b.serie',
@@ -148,7 +149,7 @@ class ReporteController extends Controller
             ->join('pagos as b','detalle_pagos.id_pago','b.id_pago')
             ->join('servicios as c','detalle_pagos.id_servicio','c.id_servicio')
             ->where('detalle_pagos.id_puesto', $request->id_puesto)
-            ->groupBy('b.total_pago', 'b.serie', 'b.numero_pago');
+            ->groupBy('b.total_pago', 'b.serie', 'b.numero_pago', 'b.id_pago'); // Agregado id_pago para estabilidad
 
         return $paginate->paginate($per_page);
     }
@@ -168,20 +169,19 @@ class ReporteController extends Controller
     {
         $cantidadSociosActivos = DB::table('socios')
             ->where('estado', '1')->count('*');
+        
         $acumulacionPagos = DB::table('pagos')
             ->whereRaw("month(fecha_registro) = month(now())")->sum('total_pago');
+            
         $acumulacionDeudas = DB::table('deudas')
             ->whereRaw("month(fecha_registro) = month(now())")->sum('total_deuda');
 
-        $acumulacionPagos = number_format($acumulacionPagos, 2, '.', ',');
-        $acumulacionDeudas = number_format($acumulacionDeudas, 2, '.', ',');
-
         $response = [
-            'acumulacion_deuda' => $acumulacionDeudas,
-            'acumulacion_pago' => $acumulacionPagos,
+            'acumulacion_deuda' => number_format($acumulacionDeudas, 2, '.', ','),
+            'acumulacion_pago' => number_format($acumulacionPagos, 2, '.', ','),
             'cantidad_socios_activos' => $cantidadSociosActivos,
         ];
+        
         return response()->json($response);
     }
-
 }

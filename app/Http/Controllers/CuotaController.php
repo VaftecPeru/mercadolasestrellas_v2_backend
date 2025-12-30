@@ -27,7 +27,7 @@ class CuotaController extends Controller
         $query = Cuota::with(['deudas', 'servicios.servicio']);
 
 
-        // Validación de parámetros opcionales
+        
         $validator = Validator::make($request->all(), [
             'anio' => 'nullable|digits:4',
             'mes' => 'nullable|digits:2',

@@ -88,10 +88,10 @@ class ReporteDeudasExport implements FromCollection, WithHeadings, WithStyles, W
 
     public function styles(Worksheet $sheet)
     {
-        // Aplicar negrita a la primera fila (encabezados)
+        
         $sheet->getStyle(1)->getFont()->setBold(true);
 
-        // Ajustar automáticamente el ancho de las columnas
+        
         foreach (range('A', 'G') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }

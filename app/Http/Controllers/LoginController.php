@@ -24,22 +24,43 @@ class LoginController extends Controller
             return response()->json(['error' => $validator->errors()->first()], 400);
         }
 
-        // Buscamos al usuario por su nombre de usuario
-        $usuario = Usuario::where('nombre_usuario', $request->input('usuario'))->first();
+        try {
+         
+            $usuario = Usuario::where('nombre_usuario', $request->input('usuario'))->first();
 
-        // Si no existe el usuario o la contraseña no coincide
-        if (!$usuario || !password_verify($request->input('password'), $usuario->contrasenia)){
-            return response()->json(['message' => 'Nombre de usuario y/o contraseña incorrectos.'], 400);
+          
+            if (!$usuario || !password_verify($request->input('password'), $usuario->contrasenia)){
+                return response()->json(['message' => 'Nombre de usuario y/o contraseña incorrectos.'], 400);
+            }
+
+            $usuario->token = $this->apiToken();
+            $usuario->save();
+
+            return response()->json([
+                "token" => $usuario->token,
+                "message" => 'Se logueo correctamente.',
+                "usuario" => [
+                    "id_usuario" => $usuario->id_usuario,
+                    "nombre_usuario" => $usuario->nombre_usuario,
+                    "rol" => $usuario->rol,
+                    "estado" => $usuario->estado,
+                    "id_rol" => $usuario->id_rol
+                ]
+            ], 200);
+
+        } catch (\Illuminate\Database\QueryException $e) {
+           
+            return response()->json([
+                'message' => 'Error de conexión con la base de datos. Verifique su archivo .env',
+                'debug' => $e->getMessage()
+            ], 500);
+        } catch (\Exception $e) {
+          
+            return response()->json([
+                'message' => 'Ocurrió un error inesperado en el servidor.',
+                'debug' => $e->getMessage()
+            ], 500);
         }
-
-        $usuario = Usuario::find($usuario->id_usuario);
-        $usuario->token = $this->apiToken();
-        $usuario->save();
-
-        return response()->json([
-            "token" => $usuario->token,
-            "message" => 'Se logueo correctamente.',
-        ],200);
     }
 
     public function logout(Request $request)
@@ -54,15 +75,14 @@ class LoginController extends Controller
             return response()->json(['error' => $validator->errors()->first()], 400);
         }
 
-        // Buscamos al usuario por su nombre de usuario
+        
         $usuario = Usuario::where('nombre_usuario', $request->input('usuario'))->first();
 
-        // Si no existe el usuario
         if (!$usuario){
             return response()->json(['message' => 'Ocurrio un error al cerrar sesión.'], 400);
         }
 
-        // Eliminamos el token
+       
         $usuario = Usuario::find($usuario->id_usuario);
         $usuario->token = null;
         $usuario->save();
@@ -72,23 +92,20 @@ class LoginController extends Controller
 
     public function validaciones(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'token' => 'required',
-        ], [
-            'token.required' => 'El token es requerido.',
-        ]);
+     
+        $token = $request->bearerToken() ?? $request->input('token');
 
-        if ($validator->fails()) {
-            return response()->json(['error' => $validator->errors()->first()], 400);
+        if (!$token) {
+            return response()->json(['error' => 'El token es requerido.'], 400);
         }
 
-        // Buscamos al usuario por su token y retornamos su id, nombre y rol
-        $usuario = Usuario::select("id_usuario", "nombre_usuario", "rol")
-            ->where('usuarios.token',$request->input('token'))->first();
+     
+        $usuario = Usuario::select("id_usuario", "nombre_usuario", "rol", "estado", "id_rol")
+            ->where('token', $token)->first();
 
-        // Si no existe el usuario
+   
         if (!$usuario){
-            return response()->json(['message' => 'No se pudo validar el acceso.'], 400);
+            return response()->json(['message' => 'Token inválido o expirado. No se pudo validar el acceso.'], 401);
         }
 
         return response()->json($usuario, 200);

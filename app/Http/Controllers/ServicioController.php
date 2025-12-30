@@ -65,7 +65,7 @@ class ServicioController extends Controller
         $servicio->tipo_servicio = $request->input('tipo_servicio');
         $servicio->fecha_registro = $request->input('fecha_registro');
 
-        // Verificamos que el tipo de servicio sea 3 y realizamos el calculo del costo unitario
+        
         if ($request->input('tipo_servicio') == 3) {
             $puestoController = new PuestoController();
             $areaTotal = $puestoController->obtenerAreaTotal()->getData()->data;
@@ -119,7 +119,6 @@ class ServicioController extends Controller
             return response()->json(['error' => 'El servicio no existe.'], 400);
         }
 
-        // Eliminamos el servicio
         $servicio->activo = false;
         $servicio->update();
 

@@ -75,11 +75,11 @@ class DeudaController extends Controller
             return response()->json(['error' => $validator->errors()->first()], 400);
         }
 
-        // Verificar si existe el servicio
+      
         $servicio = Servicio::where('nombre','Multa por inasistencia')->first();
 
         if (!$servicio) {
-            // Crear el servicio
+           
             $servicio = new Servicio();
             $servicio->nombre = 'Multa por inasistencia';
             $servicio->tipo_servicio = 2;
@@ -87,7 +87,7 @@ class DeudaController extends Controller
             $servicio->fecha_registro = date('Y-m-d');
             $servicio->save();
         } else {
-            // Actualizar el costo unitario
+            
             if ($servicio->costo_unitario != $request->input('importe')) {
                 $servicio->costo_unitario = $request->input('importe');
                 $servicio->save();
@@ -96,7 +96,7 @@ class DeudaController extends Controller
 
         $cuota = new Cuota();
         $cuota->fecha_emision = date('Y-m-d');
-        // Establecemos la fecha de vencimiento 30 días después de la fecha de emisión
+       
         $cuota->fecha_vencimiento = date('Y-m-d', strtotime($cuota->fecha_emision . ' + 30 days'));
         $cuota->importe = $request->input('importe');
         $cuota->global = false;
@@ -113,12 +113,10 @@ class DeudaController extends Controller
         $cuota_servicio->id_servicio = $servicio->id_servicio;
         $cuota_servicio->save();
 
-        // Buscamos la deuda del socio
         $deuda = Deuda::where('id_socio', $request->input('id_socio'))
             ->where('id_puesto', $request->input('id_puesto'))
             ->first();
         
-        // Si no existe la deuda, la creamos
         if (!$deuda) {
             $deuda = new Deuda();
             $deuda->id_socio = $request->input('id_socio');
@@ -126,12 +124,12 @@ class DeudaController extends Controller
             $deuda->total_deuda = $request->input('importe');
             $deuda->save();
         } else {
-            // Si existe la deuda, actualizamos el total de la deuda
+            
             $deuda->total_deuda += $request->input('importe');
             $deuda->save();
         }
 
-        // Registramos la deuda de la cuota
+        
         $deuda_cuota = new DeudaCuota();
         $deuda_cuota->id_deuda = $deuda->id_deuda;
         $deuda_cuota->id_cuota_servicio = $cuota_servicio->id_cuota_servicio;

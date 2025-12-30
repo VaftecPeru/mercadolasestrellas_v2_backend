@@ -20,11 +20,19 @@ class Pago extends Model
         'serie',
         'total_pago',
         'fecha_registro',
+       
     ];
 
     public function Socio()
     {
         return $this->belongsTo(Socio::class, 'id_socio', 'id_socio');
+    }
+
+   
+    public function Puesto()
+    {
+     
+        return $this->Socio->belongsTo(Puesto::class, 'id_puesto');
     }
 
     public function Documento()

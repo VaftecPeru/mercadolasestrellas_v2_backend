@@ -18,18 +18,18 @@ class PagosExport implements  FromCollection, WithHeadings, WithStyles
         return Pago::with([
             'socio.puesto',
             'socio.usuario.persona',
-            'socio.deuda.cuotas', // Relación correcta en plural
+            'socio.deuda.cuotas', 
             'socio.puesto',
         ])->get()->map(function($pago) {
             $a_cuenta = '------';
     
-            // Verificar si hay deudas y cuotas relacionadas
+           
             if ($pago->socio->deuda && $pago->socio->deuda->cuotas->isNotEmpty()) {
-                // Iterar sobre las cuotas relacionadas para acceder a los valores de la tabla pivote
+                
                 $cuotas = $pago->socio->deuda->cuotas;
                 foreach ($cuotas as $cuota) {
-                    $a_cuenta = $cuota->pivot->a_cuenta ?? '------'; // Acceder al campo 'a_cuenta' de la tabla pivote
-                    break; // Si solo te interesa el primer valor de 'a_cuenta', puedes salir del bucle aquí
+                    $a_cuenta = $cuota->pivot->a_cuenta ?? '------'; 
+                    break; 
                 }
             }
     
@@ -65,10 +65,10 @@ class PagosExport implements  FromCollection, WithHeadings, WithStyles
 
     public function styles(Worksheet $sheet)
     {
-        // Aplicar negrita a la primera fila (encabezados)
+        
         $sheet->getStyle(1)->getFont()->setBold(true);
 
-        // Ajustar automáticamente el ancho de las columnas
+       
         foreach (range('A', 'I') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }

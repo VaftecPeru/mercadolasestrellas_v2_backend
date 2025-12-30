@@ -8,7 +8,7 @@ class Kernel extends HttpKernel
 {
     protected $middlewareGroups = [
         'web' => [
-            // Otros middleware...
+         
             \App\Http\Middleware\VerifyCsrfToken::class,
         ],
     ];

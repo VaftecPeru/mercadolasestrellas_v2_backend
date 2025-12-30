@@ -33,7 +33,7 @@ class GiroNegocioController extends Controller
             return response()->json(["error" => $validator->errors()->first()], 400);
         }
 
-        // Registramos el giro de negocio
+        
         $giroNegocio = new GiroNegocio();
         $giroNegocio->nombre = $request->input('nombre');
         $giroNegocio->save();
