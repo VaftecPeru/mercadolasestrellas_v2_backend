@@ -21,6 +21,7 @@ class PagoResource extends JsonResource
             'serie' => $this->serie,
             'total_pago' => $this->total_pago,
             'fecha_registro' => $this->fecha_registro,
+            'pago_banco' => $this->PagoBanco,
         ];
     }
 }

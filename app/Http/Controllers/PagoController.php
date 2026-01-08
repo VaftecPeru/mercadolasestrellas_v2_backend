@@ -27,7 +27,7 @@ class PagoController extends Controller
     public function index(Request $request)
     {
         $per_page = $request->per_page ?? 15;
-        $paginate = Pago::orderBy('fecha_registro', 'desc')->paginate($per_page);
+        $paginate = Pago::with('PagoBanco')->orderBy('fecha_registro', 'desc')->paginate($per_page);
 
         return new PagoCollection($paginate);
     }
@@ -240,6 +240,71 @@ class PagoController extends Controller
     {
         $export = new PagosPDFExport();
         return $export->generatePDF();
+    }
+
+    public function update(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'fecha_registro' => 'required|date',
+            'id_banco' => 'nullable',
+            'id_bancocuenta' => 'nullable',
+            'numero_operacion' => 'nullable',
+            'fecha_operacion' => 'nullable',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 400);
+        }
+
+        DB::beginTransaction();
+        try {
+            $pago = Pago::findOrFail($id);
+            $pago->fecha_registro = $request->fecha_registro;
+            $pago->save();
+
+            // Si se envían datos de banco, actualizamos o creamos el registro relacionado
+            if ($request->filled('id_banco')) {
+                $pagoBanco = PagoBanco::where('id_pagobanco', $id)->first();
+                if (!$pagoBanco) {
+                    $pagoBanco = new PagoBanco();
+                    $pagoBanco->id_pagobanco = $id;
+                }
+                $pagoBanco->id_banco = $request->id_banco;
+                $pagoBanco->id_bancocuenta = $request->id_bancocuenta;
+                $pagoBanco->numero_operacion = $request->numero_operacion;
+                $pagoBanco->fecha_operacion = $request->fecha_operacion;
+                $pagoBanco->save();
+            }
+
+            DB::commit();
+            return response()->json(['data' => $pago, 'message' => 'El pago fue actualizado correctamente']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Ocurrió un error al intentar actualizar el pago: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function destroy($id)
+    {
+        DB::beginTransaction();
+        try {
+            $pago = Pago::findOrFail($id);
+
+            // 1. Eliminar PagoBanco si existe
+            PagoBanco::where('id_pagobanco', $id)->delete();
+
+            // 2. Eliminar DetallePagos
+            DetallePagos::where('id_pago', $id)->delete();
+
+            // 3. Eliminar el Pago
+            $pago->delete();
+
+            DB::commit();
+            return response()->json(['message' => 'El pago ha sido eliminado correctamente'], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Ocurrió un error al intentar eliminar el pago: ' . $e->getMessage()], 500);
+        }
     }
 }
 
