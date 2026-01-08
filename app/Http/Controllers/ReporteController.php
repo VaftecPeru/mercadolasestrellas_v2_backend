@@ -167,19 +167,68 @@ class ReporteController extends Controller
 
     public function dashboard(Request $request)
     {
+        $year = now()->year;
+        $month = now()->month;
+
         $cantidadSociosActivos = DB::table('socios')
             ->where('estado', '1')->count('*');
         
         $acumulacionPagos = DB::table('pagos')
-            ->whereRaw("month(fecha_registro) = month(now())")->sum('total_pago');
+            ->whereYear('fecha_registro', $year)
+            ->whereMonth('fecha_registro', $month)
+            ->sum('total_pago');
             
         $acumulacionDeudas = DB::table('deudas')
-            ->whereRaw("month(fecha_registro) = month(now())")->sum('total_deuda');
+            ->whereYear('fecha_registro', $year)
+            ->whereMonth('fecha_registro', $month)
+            ->sum('total_deuda');
+
+       
+        $totalGeneral = $acumulacionPagos + $acumulacionDeudas;
+        $porcentajePagos = $totalGeneral > 0 ? round(($acumulacionPagos / $totalGeneral) * 100, 2) : 0;
+        $porcentajeDeudas = $totalGeneral > 0 ? round(($acumulacionDeudas / $totalGeneral) * 100, 2) : 0;
+
+      
+        $mesesEspanol = [
+            1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril', 5 => 'Mayo', 6 => 'Junio',
+            7 => 'Julio', 8 => 'Agosto', 9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
+        ];
+
+        $historico = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $date = now()->subMonths($i);
+            $m = (int)$date->month;
+            $y = (int)$date->year;
+            $nombreMes = $mesesEspanol[$m];
+
+            $pagoMes = DB::table('pagos')
+                ->whereYear('fecha_registro', $y)
+                ->whereMonth('fecha_registro', $m)
+                ->sum('total_pago');
+
+            $deudaMes = DB::table('deudas')
+                ->whereYear('fecha_registro', $y)
+                ->whereMonth('fecha_registro', $m)
+                ->sum('total_deuda');
+
+            $historico[] = [
+                'name' => $nombreMes,
+                'pagos' => (float)$pagoMes,
+                'deudas' => (float)$deudaMes,
+            ];
+        }
 
         $response = [
             'acumulacion_deuda' => number_format($acumulacionDeudas, 2, '.', ','),
             'acumulacion_pago' => number_format($acumulacionPagos, 2, '.', ','),
+            'acumulacion_deuda_raw' => (float)$acumulacionDeudas,
+            'acumulacion_pago_raw' => (float)$acumulacionPagos,
             'cantidad_socios_activos' => $cantidadSociosActivos,
+            'porcentajes' => [
+                'pagos' => $porcentajePagos,
+                'deudas' => $porcentajeDeudas,
+            ],
+            'historico' => $historico
         ];
         
         return response()->json($response);

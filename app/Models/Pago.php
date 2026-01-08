@@ -44,4 +44,9 @@ class Pago extends Model
     {
         return $this->hasMany(DetallePagos::class, 'id_pago', 'id_pago');
     }
+
+    public function PagoBanco()
+    {
+        return $this->hasOne(PagoBanco::class, 'id_pagobanco', 'id_pago');
+    }
 }

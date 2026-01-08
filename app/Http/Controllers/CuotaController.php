@@ -12,6 +12,8 @@ use App\Models\CuotaServicios;
 use App\Models\DeudaCuota;
 use App\Models\Puesto;
 use App\Models\Servicio;
+use App\Models\DetallePagos;
+use App\Models\PuestoCuota;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Validator;
@@ -210,5 +212,72 @@ class CuotaController extends Controller
     public function exportPDF()
     {
         return (new CuotaPDFExport())->generatePDF();
+    }
+
+    public function update(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'fecha_emision' => 'required|date',
+            'fecha_vencimiento' => 'required|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 400);
+        }
+
+        DB::beginTransaction();
+        try {
+            $cuota = Cuota::findOrFail($id);
+            $cuota->fecha_emision = $request->fecha_emision;
+            $cuota->fecha_vencimiento = $request->fecha_vencimiento;
+            $cuota->save();
+
+            DB::commit();
+            return response()->json(['data' => $cuota, 'message' => 'La cuota fue actualizada correctamente']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Ocurrió un error al intentar actualizar la cuota: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function destroy($id)
+    {
+        DB::beginTransaction();
+        try {
+            $cuota = Cuota::findOrFail($id);
+
+            // Verificar si hay pagos asociados
+            $tienePagos = DetallePagos::where('id_cuota', $id)->exists();
+            if ($tienePagos) {
+                return response()->json(['error' => 'No se puede eliminar la cuota porque tiene pagos asociados.'], 400);
+            }
+
+            // 1. Obtener IDs de deudas relacionadas
+            $deudaIds = Deuda::where('id_cuota', $id)->pluck('id_deuda');
+
+            // 2. Obtener IDs de cuota_servicios relacionados
+            $cuotaServicioIds = CuotaServicios::where('id_cuota', $id)->pluck('id_cuota_servicio');
+
+            // 3. Eliminar DeudaCuota (depende de Deuda y CuotaServicios)
+            DeudaCuota::whereIn('id_deuda', $deudaIds)->delete();
+
+            // 4. Eliminar CuotaServicios
+            CuotaServicios::where('id_cuota', $id)->delete();
+
+            // 5. Eliminar Deudas
+            Deuda::where('id_cuota', $id)->delete();
+
+            // 6. Eliminar PuestoCuota
+            PuestoCuota::where('id_cuota', $id)->delete();
+
+            // 7. Eliminar la Cuota
+            $cuota->delete();
+
+            DB::commit();
+            return response()->json(['message' => 'La cuota ha sido eliminada correctamente'], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Ocurrió un error al intentar eliminar la cuota: ' . $e->getMessage()], 500);
+        }
     }
 }
