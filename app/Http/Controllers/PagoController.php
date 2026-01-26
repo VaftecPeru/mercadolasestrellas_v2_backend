@@ -306,5 +306,21 @@ class PagoController extends Controller
             return response()->json(['error' => 'Ocurrió un error al intentar eliminar el pago: ' . $e->getMessage()], 500);
         }
     }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv'
+        ]);
+
+        $import = new \App\Imports\PagosImport();
+        Excel::import($import, $request->file('file'));
+
+        return response()->json([
+            'message' => 'Importación finalizada.',
+            'imported_count' => $import->getImportedCount(),
+            'errors' => $import->getErrors()
+        ], 200);
+    }
 }
 

@@ -30,7 +30,7 @@ class LoginController extends Controller
 
           
             if (!$usuario || !password_verify($request->input('password'), $usuario->contrasenia)){
-                return response()->json(['message' => 'Nombre de usuario y/o contraseña incorrectos.'], 400);
+                return response()->json(['message' => 'contraseña incorrecta, vuelve a intentarlo'], 400);
             }
 
             $usuario->token = $this->apiToken();

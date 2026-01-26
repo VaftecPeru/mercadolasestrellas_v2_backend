@@ -92,6 +92,8 @@ Route::prefix('v1')->group(function () {
     Route::get('pagos/exportar', [PagoController::class, 'export']);
     Route::get('pagos/exportar-pdf', [PagoController::class, 'exportPDF']);
     Route::post('pagos/por-bancos', [PagoController::class, 'storePagoPorBanco']);
+    Route::get('test-import', function() { return response()->json(['message' => 'Ruta alcanzada correctamente']); });
+    Route::post('procesar-importacion-pagos', [PagoController::class, 'import']);
     Route::apiResource('pagos', PagoController::class);
 
     // Detalle de pagos
