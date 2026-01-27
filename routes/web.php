@@ -11,3 +11,6 @@ Route::get('/csrf-token', function () {
         'token' => csrf_token()
     ]);
 });
+
+Route::get('/socios/seleccionar', [\App\Http\Controllers\SocioController::class, 'seleccionarSocio']);
+Route::get('/pagos', [\App\Http\Controllers\PagoController::class, 'index']);

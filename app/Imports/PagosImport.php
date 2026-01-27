@@ -49,6 +49,14 @@ class PagosImport implements ToCollection, WithHeadingRow, WithValidation
                     }
                 }
 
+                // New Logic: Lookup Socio by Puesto if still missing
+                if (!$id_socio && $nro_puesto) {
+                    $puestoObj = Puesto::where('numero_puesto', $nro_puesto)->first();
+                    if ($puestoObj && $puestoObj->id_socio) {
+                        $id_socio = $puestoObj->id_socio;
+                    }
+                }
+
                 if (!$id_socio) {
                     throw new \Exception("No se pudo identificar al socio (falta id_socio o dni válido).");
                 }
@@ -57,7 +65,7 @@ class PagosImport implements ToCollection, WithHeadingRow, WithValidation
                 if (!$id_deuda_cuota) {
                     $query = DeudaCuota::join('deudas', 'deuda_cuotas.id_deuda', '=', 'deudas.id_deuda')
                         ->where('deudas.id_socio', $id_socio)
-                        ->where('deuda_cuotas.estado', 'P') // P de Pendiente o similar
+                        // ->where('deuda_cuotas.estado', 'P') // P de Pendiente. Lo comentamos para permitir registros históricos o pagos de deudas ya cerradas
                         ->select('deuda_cuotas.*');
 
                     if ($nro_puesto) {
@@ -70,7 +78,7 @@ class PagosImport implements ToCollection, WithHeadingRow, WithValidation
                     // Tomamos la deuda más antigua
                     $deudaCuota = $query->join('cuota_servicios', 'deuda_cuotas.id_cuota_servicio', '=', 'cuota_servicios.id_cuota_servicio')
                         ->join('cuotas', 'cuota_servicios.id_cuota', '=', 'cuotas.id_cuota')
-                        ->orderBy('cuotas.fecha_registro', 'asc')
+                        ->orderBy('cuotas.fecha_emision', 'asc')
                         ->first();
 
                     if (!$deudaCuota) {
@@ -84,13 +92,14 @@ class PagosImport implements ToCollection, WithHeadingRow, WithValidation
                     }
                 }
 
-                // Calcular deuda restante (simplificado para importación)
+                // Calcular deuda restante
                 $importe_a_cuenta = DetallePagos::where('id_deuda_cuota', $id_deuda_cuota)->sum('importe') ?? 0;
                 $restante = $deudaCuota->monto - $importe_a_cuenta;
 
-                if ($row['importe'] > $restante) {
-                    throw new \Exception("El importe ({$row['importe']}) excede la deuda restante ({$restante}) para la deuda #{$id_deuda_cuota}.");
-                }
+                // Relaxed validation: Allow payments even if they exceed the remaining debt (e.g., for historical records)
+                // if ($row['importe'] > $restante) {
+                //     throw new \Exception("El importe ({$row['importe']}) excede la deuda restante ({$restante}) para la deuda #{$id_deuda_cuota}.");
+                // }
 
                 // 4. Generar número de pago
                 $numeroDocumentoNuevo = $documento->numero_documento + 1;

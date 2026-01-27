@@ -1,142 +1,16 @@
 <?php
 
-use App\Http\Controllers\BlockController;
-use App\Http\Controllers\CuotaController;
-use App\Http\Controllers\DeudaController;
-// use App\Http\Controllers\DocumentoController;
-use App\Http\Controllers\GiroNegocioController;
-use App\Http\Controllers\InquilinoController;
 use App\Http\Controllers\PagoController;
-// use App\Http\Controllers\PagoDetalleController;
-use App\Http\Controllers\PuestoController;
-use App\Http\Controllers\ServicioController;
 use App\Http\Controllers\SocioController;
-use App\Http\Controllers\ReporteController;
-use App\Http\Controllers\LoginController;
-use App\Http\Controllers\SetupController;
-use App\Models\Persona;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-| Estas rutas se cargan bajo el prefijo "/api" automáticamente.
-*/
-
-
-Route::prefix('v1')->group(function () {
-
-    // Login - Valida credenciales y genera token
-    Route::post('/login', [LoginController::class, 'login']);
-    Route::get('/login', function() {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'El endpoint de login solo acepta peticiones POST. Por favor, use la interfaz de usuario de la aplicación para iniciar sesión.'
-        ], 405);
-    });
-
-    Route::post('/logout', [LoginController::class, 'logout']);
-    
-    // Validaciones - Verifica si un token es válido
-    Route::get('/validaciones', [LoginController::class, 'validaciones']);
-    Route::post('/validar-token', [LoginController::class, 'validaciones']);
-
-    // Socios
-    Route::get('socios/seleccionar', [SocioController::class, 'seleccionarSocio']);
-    Route::get('socios/ver-puestos', [SocioController::class, 'listarPuestos']);
-    Route::get('socios/exportar', [SocioController::class, 'export']);
-    Route::get('socios/exportar-pdf', [SocioController::class, 'exportPDF']);
-    Route::apiResource('socios', SocioController::class);
-
-    // Inquilinos
-    Route::apiResource('inquilinos', InquilinoController::class);
-
-    // Puestos
-    Route::get('puestos/sin-socio', [PuestoController::class, 'puestosSinSocio']);
-    Route::get('puestos/sin-inquilino', [PuestoController::class, 'puestosSinInquilino']);
-    Route::get('puestos/seleccionar', [PuestoController::class, 'seleccionarPuesto']);
-    Route::get('puestos/total', [PuestoController::class, 'obtenerTotalPuestos']);
-    Route::get('puestos/area-total', [PuestoController::class, 'obtenerAreaTotal']);
-    Route::get('puestos/exportar', [PuestoController::class, 'export']);
-    Route::get('puestos/exportar-pdf', [PuestoController::class, 'exportPDF']);
-    Route::post('puestos/asignar', [PuestoController::class, 'asignar']);
-    Route::apiResource('puestos', PuestoController::class);
-
-    // Bloques
-    Route::apiResource('blocks', BlockController::class);
-
-    // Giros de negocio
-    Route::apiResource('giro-negocios', GiroNegocioController::class);
-
-    // Servicios
-    Route::get('servicios/exportar', [ServicioController::class, 'export']);
-    Route::get('servicios/exportar-pdf', [ServicioController::class, 'exportPDF']);
-    Route::get('servicios/consultar-importe-multa-inasistencia', [ServicioController::class, 'consultarImporteMultaInasistencia']);
-    Route::apiResource('servicios', ServicioController::class);
-
-    // Cuotas
-    Route::get('cuotas/exportar', [CuotaController::class, 'export']);
-    Route::get('cuotas/exportar-pdf', [CuotaController::class, 'exportPDF']);
-    Route::post('cuotas/por-puestos', [CuotaController::class, 'storePorPuesto']);
-    Route::apiResource('cuotas', CuotaController::class);
-    
-    // Deudas
-    Route::get('deudas/pendientes', [DeudaController::class, 'deudaPendientes']);
-    Route::get('deudacuota/{id_puesto}', [PagoController::class,'ListaDeudaCuotas']);
-    Route::post('deudas/registrar-multa-inasistencia', [DeudaController::class, 'registrarMultaInasistencia']);
-    Route::apiResource('deudas', DeudaController::class);
-
-    // Pagos
-    Route::get('pagos/exportar', [PagoController::class, 'export']);
-    Route::get('pagos/exportar-pdf', [PagoController::class, 'exportPDF']);
-    Route::post('pagos/por-bancos', [PagoController::class, 'storePagoPorBanco']);
-    Route::get('test-import', function() { return response()->json(['message' => 'Ruta alcanzada correctamente']); });
-    Route::post('procesar-importacion-pagos', [PagoController::class, 'import']);
-    Route::apiResource('pagos', PagoController::class);
-
-    // Detalle de pagos
-    // Route::apiResource('pago_detalle', PagoDetalleController::class);
-
-    // Documentos
-    // Route::apiResource('documentos', DocumentoController::class);
-    
-    // ============================================
-    // REPORTES Y DASHBOARD
-    // ============================================
-    
-    Route::get('reportes/pagos', [ReporteController::class, 'pagos']);
-    Route::get('reportes/pagos/exportar', [ReporteController::class, 'exportReportePagos']);
-    Route::get('reportes/pagos/exportar-pdf', [ReporteController::class, 'exportReportePagosPDF']);
-
-    Route::get('reportes/deudas', [ReporteController::class, 'deudas']);
-    Route::get('reportes/deudas/exportar', [ReporteController::class, 'exportReporteDeudas']);
-    Route::get('reportes/deudas/exportar-pdf', [ReporteController::class, 'exportReporteDeudasPDF']);
-
-    Route::get('reportes/cuota-por-metros', [ReporteController::class, 'cuotaPorMetros']);
-    Route::get('reportes/cuota-por-metros/exportar', [ReporteController::class, 'exportReporteCuotasMetrado']);
-    Route::get('reportes/cuota-por-metros/exportar-pdf', [ReporteController::class, 'exportReporteCuotasMetradoPDF']);
-
-    Route::get('reportes/cuota-por-puestos', [ReporteController::class, 'cuotaPorPuestos']);
-    Route::get('reportes/cuota-por-puestos/exportar', [ReporteController::class, 'exportReporteCuotasPuesto']);
-    Route::get('reportes/cuota-por-puestos/exportar-pdf', [ReporteController::class, 'exportReporteCuotasPuestoPDF']);
-
-    Route::get('reportes/resumen-por-puestos', [ReporteController::class, 'resumenPorPuestos']);
-    Route::get('reportes/resumen-por-puestos/exportar', [ReporteController::class, 'exportReporteResumenPorPuesto']);
-    Route::get('reportes/resumen-por-puestos/exportar-pdf', [ReporteController::class, 'exportReporteResumenPorPuestoPDF']);
-
-    // Dashboard
-    Route::get('reportes/dashboard', [ReporteController::class, 'dashboard']);
-
-    // Setup
-    Route::get('setup/anios', [SetupController::class, 'indexAnio']);
-    Route::get('setup/meses', [SetupController::class, 'indexMes']);
-    Route::get('setup/bancos', [SetupController::class, 'indexBanco']);
-    Route::get('setup/banco-cuentas', [SetupController::class, 'indexBancoCuenta']);
-    Route::get('setup/modulos/web', [SetupController::class, 'indexModuloWeb']);
-
-    Route::get('/ping', function() {
-        return response()->json(['status' => 'pong', 'time' => now()]);
-    });
+// Bridge for v1 prefixed calls from frontend
+Route::group(['prefix' => 'v1'], function () {
+    Route::get('/socios/seleccionar', [SocioController::class, 'seleccionarSocio']);
+    Route::get('/pagos', [PagoController::class, 'index']);
+    Route::post('/pagos', [PagoController::class, 'store']);
+    Route::post('/pagos/por-bancos', [PagoController::class, 'storePagoPorBanco']);
+    Route::put('/pagos/{pago}', [PagoController::class, 'update']);
+    Route::delete('/pagos/{pago}', [PagoController::class, 'destroy']);
+    Route::post('/importar-pagos-excel', [PagoController::class, 'import']);
 });
