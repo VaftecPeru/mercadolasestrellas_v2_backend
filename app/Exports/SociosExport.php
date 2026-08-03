@@ -22,7 +22,7 @@ class SociosExport implements FromCollection, WithHeadings, WithStyles
 
         Socio::with(['puestos.block', 'puestos.gironegocio', 'puestos.inquilino'])->get()->each(function ($socio) use ($data) {
             $socioData = [
-                'nombre' => $socio->nombres . ' ' . $socio->apellido_paterno . ' ' . $socio->apellido_materno ?? '------',
+                'nombre' => trim(($socio->nombres ?? '').' '.($socio->apellido_paterno ?? '').' '.($socio->apellido_materno ?? '')) ?: '------',
                 'dni' => $socio->dni ?? '------',
                 'telefono' => $socio->telefono ?? '------',
                 'correo' => $socio->correo ?? '------',
@@ -31,16 +31,18 @@ class SociosExport implements FromCollection, WithHeadings, WithStyles
 
             $rowStart = $this->rowCount + 1; 
 
-            foreach ($socio->puestos as $puesto) {
+            $puestos = $socio->puestos->isEmpty() ? collect([(object) []]) : $socio->puestos;
+
+            foreach ($puestos as $puesto) {
                 $data->push([
                     $socioData['nombre'], 
                     $socioData['dni'],
                     $socioData['telefono'],
                     $socioData['correo'],
-                    $puesto->block->nombre ?? '------',
-                    $puesto->numero_puesto ?? '------',
-                    $puesto->gironegocio->nombre ?? '------',
-                    $puesto->inquilino->nombre.' '.$puesto->inquilino->apellido_paterno.' '.$puesto->inquilino->apellido_materno ?? '------',
+                    data_get($puesto, 'block.nombre', '------'),
+                    data_get($puesto, 'numero_puesto', '------'),
+                    data_get($puesto, 'gironegocio.nombre', '------'),
+                    trim(data_get($puesto, 'inquilino.nombre', '').' '.data_get($puesto, 'inquilino.apellido_paterno', '').' '.data_get($puesto, 'inquilino.apellido_materno', '')) ?: '------',
                     $socioData['fecha_registro'],
                 ]);
 
@@ -48,7 +50,7 @@ class SociosExport implements FromCollection, WithHeadings, WithStyles
                 $socioData = array_fill_keys(array_keys($socioData), '');
             }
 
-            $this->rowCount = $rowStart + count($socio->puestos) - 1; 
+            $this->rowCount = $rowStart + max(count($puestos), 1) - 1; 
         });
 
         return $data;
@@ -75,7 +77,7 @@ class SociosExport implements FromCollection, WithHeadings, WithStyles
 
         foreach (Socio::withCount('puestos')->get() as $socio) {
             $rowStart = $row;
-            $rowEnd = $rowStart + $socio->puestos_count - 1;
+            $rowEnd = $rowStart + max($socio->puestos_count, 1) - 1;
 
             if ($socio->puestos_count > 1) {
                 

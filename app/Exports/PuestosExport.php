@@ -22,14 +22,14 @@ class PuestosExport implements FromCollection, WithHeadings, WithStyles
             'inquilino' 
         ])->where('activo', true)->get()->map(function($puesto) {
             return [
-                'bloque' => $puesto->block->nombre ?? '------', 
+                'bloque' => data_get($puesto, 'block.nombre', '------'), 
                 'puesto' => $puesto->numero_puesto ?? '------', 
                 'area' => $puesto->area ?? '------', 
-                'giro' => $puesto->gironegocio->nombre ?? '------', 
-                'socio' => $puesto->socio->usuario->nombre_usuario ?? '------', 
-                'inquilino' => $puesto->inquilino->nombre_completo ?? '------', 
+                'giro' => data_get($puesto, 'gironegocio.nombre', '------'), 
+                'socio' => data_get($puesto, 'socio.usuario.nombre_usuario', '------'), 
+                'inquilino' => data_get($puesto, 'inquilino.nombre_completo', '------'), 
                 'estado' => $puesto->estado === '1' ?  'Libre' : 'Ocupado',
-                'fecha_registro' => $fecha_registro ?? '------',
+                'fecha_registro' => $puesto->fecha_registro ?? '------',
             ];
         });
     }

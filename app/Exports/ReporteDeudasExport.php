@@ -36,7 +36,7 @@ class ReporteDeudasExport implements FromCollection, WithHeadings, WithStyles, W
                 $mes = '';
                 $mesCarbon = (new Carbon( $deuda->fecha_registro ))->format('m');
                 $mesCarbon = (int)$mesCarbon;
-                $mes = (SetupMes::find($mesCarbon))->nombre;
+                $mes = data_get(SetupMes::find($mesCarbon), 'nombre', '------');
                 
                 $deudaCuotas = DeudaCuota::select('c.nombre')
                     ->join('cuota_servicios as b','deuda_cuotas.id_cuota_servicio','b.id_cuota_servicio')

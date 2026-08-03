@@ -16,6 +16,7 @@ use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 class ReporteCuotasMetradoExport implements FromCollection, WithHeadings, WithStyles, WithEvents, WithColumnFormatting
 {
     protected $id_cuota;
+    private $count = 0;
 
     public function __construct($id_cuota)
     {

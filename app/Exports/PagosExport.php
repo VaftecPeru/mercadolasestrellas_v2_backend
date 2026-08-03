@@ -16,31 +16,25 @@ class PagosExport implements  FromCollection, WithHeadings, WithStyles
     public function collection()
     {
         return Pago::with([
-            'socio.puesto',
-            'socio.usuario.persona',
-            'socio.deuda.cuotas', 
-            'socio.puesto',
+            'Socio.Puestos',
+            'Socio.Usuario',
+            'Socio.Persona',
+            'DetallePagos',
         ])->get()->map(function($pago) {
             $a_cuenta = '------';
-    
-           
-            if ($pago->socio->deuda && $pago->socio->deuda->cuotas->isNotEmpty()) {
-                
-                $cuotas = $pago->socio->deuda->cuotas;
-                foreach ($cuotas as $cuota) {
-                    $a_cuenta = $cuota->pivot->a_cuenta ?? '------'; 
-                    break; 
-                }
+
+            if ($pago->DetallePagos && $pago->DetallePagos->isNotEmpty()) {
+                $a_cuenta = $pago->DetallePagos->sum('importe');
             }
-    
+
             return [
                 'id' => $pago->id_pago?? '------', 
-                'n_puesto' => $pago->socio->puesto->numero_puesto ?? '------', 
-                'socio' => $pago->socio->usuario->nombre_usuario ?? '------', 
-                'dni' => $pago->socio->usuario->persona->dni ?? '------', 
+                'n_puesto' => data_get($pago, 'Socio.Puestos.0.numero_puesto', '------'), 
+                'socio' => data_get($pago, 'Socio.Usuario.nombre_usuario', '------'), 
+                'dni' => data_get($pago, 'Socio.Persona.dni', '------'), 
                 'fecha_registro' => $pago->fecha_registro ?? '------', 
-                'telefono' => $pago->socio->usuario->persona->telefono ?? '------', 
-                'correo' => $pago->socio->usuario->persona->correo ?? '------', 
+                'telefono' => data_get($pago, 'Socio.Persona.telefono', '------'), 
+                'correo' => data_get($pago, 'Socio.Persona.correo', '------'), 
                 'a_cuenta' => $a_cuenta,
                 'monto_total' => $pago->total_pago ?? '------', 
             ];

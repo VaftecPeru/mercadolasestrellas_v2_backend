@@ -16,14 +16,14 @@ class PuestosPDFExport {
       'inquilino' 
     ])->where('activo', true)->get()->map(function($puesto) {
       return [
-        'bloque' => $puesto->block->nombre ?? '------', 
+        'bloque' => data_get($puesto, 'block.nombre', '------'), 
         'puesto' => $puesto->numero_puesto ?? '------', 
         'area' => $puesto->area ?? '------', 
-        'giro' => $puesto->gironegocio->nombre ?? '------', 
-        'socio' => $puesto->socio->nombres.' '.$puesto->socio->apellido_paterno.' '.$puesto->socio->apellido_materno ?? '------', 
-        'inquilino' => $puesto->inquilino->nombre.' '.$puesto->inquilino->apellido_paterno.' '.$puesto->inquilino->apellido_maaterno ?? '------', 
+        'giro' => data_get($puesto, 'gironegocio.nombre', '------'), 
+        'socio' => trim(data_get($puesto, 'socio.nombres', '').' '.data_get($puesto, 'socio.apellido_paterno', '').' '.data_get($puesto, 'socio.apellido_materno', '')) ?: '------', 
+        'inquilino' => trim(data_get($puesto, 'inquilino.nombre', '').' '.data_get($puesto, 'inquilino.apellido_paterno', '').' '.data_get($puesto, 'inquilino.apellido_materno', '')) ?: '------', 
         'estado' => $puesto->estado === '1' ?  'Libre' : 'Ocupado',
-        'fecha_registro' => $fecha_registro ?? '------', 
+        'fecha_registro' => $puesto->fecha_registro ?? '------', 
       ];
     });
 

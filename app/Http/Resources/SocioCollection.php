@@ -15,6 +15,8 @@ class SocioCollection extends ResourceCollection
      */
     public function toArray($request)
     {
+        $paginator = $this->resource;
+
         return [
             'data' => $this->collection->transform(function ($socio) {
                 $puestos = Puesto::where('id_puesto',$socio->id_puesto)->get();
@@ -68,7 +70,10 @@ class SocioCollection extends ResourceCollection
                 'self' => url('/socios'),
             ],
             'meta' => [
-                'total' => $this->collection->count(),
+                'current_page' => method_exists($paginator, 'currentPage') ? $paginator->currentPage() : 1,
+                'last_page' => method_exists($paginator, 'lastPage') ? $paginator->lastPage() : 1,
+                'per_page' => method_exists($paginator, 'perPage') ? $paginator->perPage() : $this->collection->count(),
+                'total' => method_exists($paginator, 'total') ? $paginator->total() : $this->collection->count(),
             ],
         ];
     }

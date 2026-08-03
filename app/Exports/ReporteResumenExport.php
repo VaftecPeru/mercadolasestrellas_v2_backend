@@ -31,7 +31,7 @@ class ReporteResumenExport implements FromCollection, WithHeadings, WithStyles, 
             ->get()
             ->map(function ($detallePagos) {
                 return [
-                    'serie_numero' => $detallePagos->pago ? $detallePagos->pago->serie.'-'.$detallePagos->pago->numero_pago : '-',
+                    'serie_numero' => $detallePagos->pago ? trim(($detallePagos->pago->serie ?? '').'-'.($detallePagos->pago->numero_pago ?? '')) : '-',
                     'importe_ingreso' => $detallePagos->importe,
                     'importe_gastos_administrativo' => 0,
                     'importe_multas_inasistencia' => 0,
