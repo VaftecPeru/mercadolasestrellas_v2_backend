@@ -40,9 +40,7 @@ Route::group(['prefix' => 'v1'], function () {
     Route::post('/cuotas/por-puesto', [CuotaController::class, 'storePorPuesto']);
     Route::put('/cuotas/{id}', [CuotaController::class, 'update']);
     Route::delete('/cuotas/{id}', [CuotaController::class, 'destroy']);
-    Route::get('/cuotas/export', [CuotaController::class, 'export']);
     Route::get('/cuotas/exportar', [CuotaController::class, 'export']);
-    Route::get('/cuotas/export-pdf', [CuotaController::class, 'exportPDF']);
     Route::get('/cuotas/exportar-pdf', [CuotaController::class, 'exportPDF']);
     Route::get('/socios', [SocioController::class, 'index']);
     Route::get('/socios/seleccionar', [SocioController::class, 'seleccionarSocio']);
@@ -50,9 +48,7 @@ Route::group(['prefix' => 'v1'], function () {
     Route::post('/socios', [SocioController::class, 'store']);
     Route::put('/socios/{id_socio}', [SocioController::class, 'update']);
     Route::delete('/socios/{id_socio}', [SocioController::class, 'destroy']);
-    Route::get('/socios/export', [SocioController::class, 'export']);
     Route::get('/socios/exportar', [SocioController::class, 'export']);
-    Route::get('/socios/export-pdf', [SocioController::class, 'exportPDF']);
     Route::get('/socios/exportar-pdf', [SocioController::class, 'exportPDF']);
 
     Route::get('/pagos', [PagoController::class, 'index']);
@@ -60,9 +56,7 @@ Route::group(['prefix' => 'v1'], function () {
     Route::post('/pagos/por-bancos', [PagoController::class, 'storePagoPorBanco']);
     Route::put('/pagos/{pago}', [PagoController::class, 'update']);
     Route::delete('/pagos/{pago}', [PagoController::class, 'destroy']);
-    Route::get('/pagos/export', [PagoController::class, 'export']);
     Route::get('/pagos/exportar', [PagoController::class, 'export']);
-    Route::get('/pagos/export-pdf', [PagoController::class, 'exportPDF']);
     Route::get('/pagos/exportar-pdf', [PagoController::class, 'exportPDF']);
     Route::post('/importar-pagos-excel', [PagoController::class, 'import']);
 
@@ -76,9 +70,7 @@ Route::group(['prefix' => 'v1'], function () {
     Route::post('/puestos/asignar', [PuestoController::class, 'asignar']);
     Route::put('/puestos/{id_puesto}', [PuestoController::class, 'update']);
     Route::delete('/puestos/{id_puesto}', [PuestoController::class, 'destroy']);
-    Route::get('/puestos/export', [PuestoController::class, 'export']);
     Route::get('/puestos/exportar', [PuestoController::class, 'export']);
-    Route::get('/puestos/export-pdf', [PuestoController::class, 'exportPDF']);
     Route::get('/puestos/exportar-pdf', [PuestoController::class, 'exportPDF']);
 
     Route::get('/servicios', [ServicioController::class, 'index']);
@@ -86,39 +78,26 @@ Route::group(['prefix' => 'v1'], function () {
     Route::post('/servicios', [ServicioController::class, 'store']);
     Route::put('/servicios/{id_servicio}', [ServicioController::class, 'update']);
     Route::delete('/servicios/{id_servicio}', [ServicioController::class, 'destroy']);
-    Route::get('/servicios/export', [ServicioController::class, 'export']);
     Route::get('/servicios/exportar', [ServicioController::class, 'export']);
-    Route::get('/servicios/export-pdf', [ServicioController::class, 'exportPDF']);
     Route::get('/servicios/exportar-pdf', [ServicioController::class, 'exportPDF']);
 
     Route::get('/reportes/pagos', [ReporteController::class, 'pagos']);
-    Route::get('/reportes/pagos/export', [ReporteController::class, 'exportReportePagos']);
     Route::get('/reportes/pagos/exportar', [ReporteController::class, 'exportReportePagos']);
-    Route::get('/reportes/pagos/export-pdf', [ReporteController::class, 'exportReportePagosPDF']);
     Route::get('/reportes/pagos/exportar-pdf', [ReporteController::class, 'exportReportePagosPDF']);
     Route::get('/reportes/deudas', [ReporteController::class, 'deudas']);
-    Route::get('/reportes/deudas/export', [ReporteController::class, 'exportReporteDeudas']);
     Route::get('/reportes/deudas/exportar', [ReporteController::class, 'exportReporteDeudas']);
-    Route::get('/reportes/deudas/export-pdf', [ReporteController::class, 'exportReporteDeudasPDF']);
     Route::get('/reportes/deudas/exportar-pdf', [ReporteController::class, 'exportReporteDeudasPDF']);
     Route::get('/reportes/cuotas/metrado', [ReporteController::class, 'cuotaPorMetros']);
-    Route::get('/reportes/cuotas/metrado/export', [ReporteController::class, 'exportReporteCuotasMetrado']);
     Route::get('/reportes/cuotas/metrado/exportar', [ReporteController::class, 'exportReporteCuotasMetrado']);
-    Route::get('/reportes/cuotas/metrado/export-pdf', [ReporteController::class, 'exportReporteCuotasMetradoPDF']);
     Route::get('/reportes/cuotas/metrado/exportar-pdf', [ReporteController::class, 'exportReporteCuotasMetradoPDF']);
     Route::get('/reportes/cuotas/puesto', [ReporteController::class, 'cuotaPorPuestos']);
-    Route::get('/reportes/cuotas/puesto/export', [ReporteController::class, 'exportReporteCuotasPuesto']);
     Route::get('/reportes/cuotas/puesto/exportar', [ReporteController::class, 'exportReporteCuotasPuesto']);
-    Route::get('/reportes/cuotas/puesto/export-pdf', [ReporteController::class, 'exportReporteCuotasPuestoPDF']);
     Route::get('/reportes/cuotas/puesto/exportar-pdf', [ReporteController::class, 'exportReporteCuotasPuestoPDF']);
     Route::get('/reportes/resumen/puesto', [ReporteController::class, 'resumenPorPuestos']);
-    Route::get('/reportes/resumen/puesto/export', [ReporteController::class, 'exportReporteResumenPorPuesto']);
     Route::get('/reportes/resumen/puesto/exportar', [ReporteController::class, 'exportReporteResumenPorPuesto']);
-    Route::get('/reportes/resumen/puesto/export-pdf', [ReporteController::class, 'exportReporteResumenPorPuestoPDF']);
     Route::get('/reportes/resumen/puesto/exportar-pdf', [ReporteController::class, 'exportReporteResumenPorPuestoPDF']);
     Route::get('/reportes/dashboard', [ReporteController::class, 'dashboard']);
 
-    // Rutas que faltan
     Route::post('/login', [LoginController::class, 'login']);
     Route::post('/logout', [LoginController::class, 'logout']);
     Route::get('/validaciones', [LoginController::class, 'validaciones']);

@@ -144,6 +144,7 @@ class SocioController extends Controller
 
         $usuario->estado = $request->input('estado');
         $usuario->fecha_registro = $request->input('fecha_registro');
+        $usuario->id_rol = 2;
         $usuario->save();
 
         // Registro de socio
