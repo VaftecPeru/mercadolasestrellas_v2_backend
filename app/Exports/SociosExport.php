@@ -20,13 +20,16 @@ class SociosExport implements FromCollection, WithHeadings, WithStyles
     {
         $data = collect();
 
-        Socio::with(['puestos.block', 'puestos.gironegocio', 'puestos.inquilino'])->get()->each(function ($socio) use ($data) {
+        Socio::with(['Persona', 'puestos.block', 'puestos.gironegocio', 'puestos.inquilino'])->get()->each(function ($socio) use ($data) {
+            // Los datos personales viven en la tabla `personas` (relación 1:1 con el mismo ID)
+            $persona = $socio->persona;
+
             $socioData = [
-                'nombre' => trim(($socio->nombres ?? '').' '.($socio->apellido_paterno ?? '').' '.($socio->apellido_materno ?? '')) ?: '------',
-                'dni' => $socio->dni ?? '------',
-                'telefono' => $socio->telefono ?? '------',
-                'correo' => $socio->correo ?? '------',
-                'fecha_registro' => $socio->fecha_registro ?? '------',
+                'nombre' => trim($persona->nombre_completo ?? ($persona->nombre ?? '').' '.($persona->apellido_paterno ?? '').' '.($persona->apellido_materno ?? '')) ?: '------',
+                'dni' => $persona->dni ?? '------',
+                'telefono' => $persona->telefono ?? '------',
+                'correo' => $persona->correo ?? '------',
+                'fecha_registro' => $socio->fecha_registro ?? ($persona->fecha_registro ?? '------'),
             ];
 
             $rowStart = $this->rowCount + 1; 

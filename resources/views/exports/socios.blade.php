@@ -67,10 +67,10 @@
       </tr>
       @for($i = 1; $i < count($socio['puestos']); $i++)
       <tr>
-        <td>{{ $socio['puestos'][0]['block'] }}</td>
-        <td>{{ $socio['puestos'][0]['giro'] }}</td>
-        <td>{{ $socio['puestos'][0]['numero'] }}</td>
-        <td>{{ $socio['puestos'][0]['inquilino'] }}</td>
+        <td>{{ $socio['puestos'][$i]['block'] }}</td>
+        <td>{{ $socio['puestos'][$i]['giro'] }}</td>
+        <td>{{ $socio['puestos'][$i]['numero'] }}</td>
+        <td>{{ $socio['puestos'][$i]['inquilino'] }}</td>
       </tr>
       @endfor
       @endforeach

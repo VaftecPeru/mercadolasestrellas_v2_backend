@@ -9,17 +9,16 @@ class SociosPDFExport {
 
   public function generatePDF() {
 
-    $socios = Socio::with(['Usuario', 'Puestos.block', 'Puestos.gironegocio', 'Puestos.inquilino'])
-      ->whereHas('Usuario', function ($query) {
-        $query->where('estado', '0');
-      })
+    $socios = Socio::with(['Persona', 'Puestos.block', 'Puestos.gironegocio', 'Puestos.inquilino'])
+      ->where('socios.estado', '1')
       ->get()->map(function ($socio) {
+      $persona = $socio->persona;
       $puestos = $socio->Puestos->map(function ($puesto) {
       return [
           'block' => data_get($puesto, 'block.nombre', '------'),
           'giro' => data_get($puesto, 'gironegocio.nombre', '------'),
           'numero' => data_get($puesto, 'numero_puesto', '------'),
-          'inquilino' => data_get($puesto, 'inquilino.nombre_completo', '------'),
+          'inquilino' => trim(data_get($puesto, 'inquilino.nombre', '').' '.data_get($puesto, 'inquilino.apellido_paterno', '').' '.data_get($puesto, 'inquilino.apellido_materno', '')) ?: '------',
         ];
       });
 
@@ -33,12 +32,12 @@ class SociosPDFExport {
       }
 
       return [
-        'nombre' => trim(($socio->nombres ?? '').' '.($socio->apellido_paterno ?? '').' '.($socio->apellido_materno ?? '')) ?: '------', 
-        'dni' => $socio->dni ?? '------', 
-        'telefono' => $socio->telefono ?? '------', 
-        'correo' => $socio->correo ?? '------', 
+        'nombre' => trim($persona->nombre_completo ?? ($persona->nombre ?? '').' '.($persona->apellido_paterno ?? '').' '.($persona->apellido_materno ?? '')) ?: '------',
+        'dni' => $persona->dni ?? '------', 
+        'telefono' => $persona->telefono ?? '------', 
+        'correo' => $persona->correo ?? '------', 
         'puestos' => $puestos,
-        'fecha_registro' => $socio->fecha_registro ?? '------',
+        'fecha_registro' => $socio->fecha_registro ?? ($persona->fecha_registro ?? '------'),
       ];
     });
 
