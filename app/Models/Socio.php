@@ -25,12 +25,13 @@ class Socio extends Model
         'telefono',
         'direccion',
         'sexo',
-        'fecha_registro'
+        'fecha_registro',
+        'estado'
     ];
 
     public function Usuario()
     {
-        return $this->belongsTo(Usuario::class, 'id_socio', 'id_usuario');
+        return $this->belongsTo(Usuario::class, 'id_usuario', 'id_usuario');
     }
 
     public function Deuda()
@@ -41,6 +42,11 @@ class Socio extends Model
     public function Puestos()
     {
         return $this->hasMany(Puesto::class, 'id_socio', 'id_socio');
+    }
+
+    public function Puesto()
+    {
+        return $this->hasOne(Puesto::class, 'id_socio', 'id_socio');
     }
 
     public function Pago()

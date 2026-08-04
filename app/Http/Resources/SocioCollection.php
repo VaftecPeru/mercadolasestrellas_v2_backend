@@ -19,7 +19,12 @@ class SocioCollection extends ResourceCollection
 
         return [
             'data' => $this->collection->transform(function ($socio) {
-                $puestos = Puesto::where('id_puesto',$socio->id_puesto)->get();
+                // Obtener los puestos del socio desde la relación (evita N+1 del JOIN)
+                $puestos = $socio->relationLoaded('puestos')
+                    ? $socio->puestos
+                    : Puesto::with(['Block', 'Gironegocio', 'Inquilino'])
+                        ->where('id_socio', $socio->id_socio)
+                        ->get();
 
                 $deuda = 0;
                 if($socio->id_puesto) {
@@ -61,7 +66,7 @@ class SocioCollection extends ResourceCollection
                             'nombre_inquilino' => $puesto->inquilino ? $puesto->inquilino->nombre.' '.$puesto->inquilino->apellido_paterno.' '.$puesto->inquilino->apellido_materno : 'No asignado',
                         ];
                     }),
-                    'estado' =>  $socio->usuario ? $socio->usuario->estado : '0',
+                    'estado' =>  $socio->usuario ? $socio->usuario->estado : ($socio->estado ?? '1'),
                     'fecha_registro' => $socio->fecha_registro ? $socio->fecha_registro : null,
                     'deuda' => $deuda,
                 ];

@@ -25,11 +25,12 @@ class SocioController extends Controller
             $per_page = $request->per_page;
         }
 
-        $listado = Socio::select('socios.*','d.numero_puesto','d.id_puesto')
-            ->join('usuarios as b','socios.id_socio','b.id_usuario')
+        $listado = Socio::with(['Persona', 'Usuario', 'Puestos.Block', 'Puestos.Gironegocio', 'Puestos.Inquilino'])
+            ->select('socios.*','d.numero_puesto','d.id_puesto')
+            ->leftJoin('usuarios as b','socios.id_usuario','b.id_usuario')
             ->join('personas as c','socios.id_socio','c.id_persona')
             ->leftJoin('puestos as d','socios.id_socio','d.id_socio')
-            ->where('b.estado', '1');
+            ->where('socios.estado', '1');
 
         if (isset($request->nombre_socio)) {
             $texto = strtr(utf8_decode($request->nombre_socio), utf8_decode('àáâãäçèéêëìíîïñòóôõöùúûüýÿÀÁÂÃÄÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ'), 'aaaaaceeeeiiiinooooouuuuyyAAAAACEEEEIIIINOOOOOUUUUY');
@@ -49,9 +50,8 @@ class SocioController extends Controller
 
     public function seleccionarSocio()
     {
-        $socios = Socio::join('usuarios', 'socios.id_socio', 'usuarios.id_usuario')
-            ->join('personas as c','socios.id_socio','c.id_persona')
-            ->where('usuarios.estado', '1')
+        $socios = Socio::join('personas as c','socios.id_socio','c.id_persona')
+            ->where('socios.estado', '1')
             ->select('socios.id_socio', 'c.nombre_completo', 'c.dni')
             ->get();
         
@@ -242,11 +242,13 @@ class SocioController extends Controller
         $socio->telefono = $request->input('telefono');
         $socio->update();
 
-        // Actualizar datos de usuario
+        // Actualizar datos de usuario (si existe)
         $usuario = Usuario::where('id_usuario', $socio->id_usuario)->first();
-        $usuario->nombre_usuario = $nombre_completo;
-        $usuario->estado = $request->input('estado');
-        $usuario->update();
+        if ($usuario) {
+            $usuario->nombre_usuario = $nombre_completo;
+            $usuario->estado = $request->input('estado');
+            $usuario->update();
+        }
 
         return response()->json(["data"=>$socio, "message"=>"Los datos del socio fueron actualizados correctamente"]);
     }
@@ -269,10 +271,12 @@ class SocioController extends Controller
             $puesto->update();
         }
 
-        // Desactivamos al usuario
+        // Desactivamos al usuario (si existe)
         $usuario = Usuario::where('id_usuario', $socio->id_usuario)->first();
-        $usuario->estado = 0;
-        $usuario->update();
+        if ($usuario) {
+            $usuario->estado = 0;
+            $usuario->update();
+        }
 
         return response()->json(["message"=>"El socio fue eliminado correctamente"]);
     }
