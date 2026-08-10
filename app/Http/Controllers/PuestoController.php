@@ -202,4 +202,36 @@ class PuestoController extends Controller
         return $export->generatePDF();
     }
 
+
+
+    public function transferir(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id_duenio_actual' => 'required',
+            'id_puesto'        => 'required',
+            'id_nuevo_duenio'  => 'required',
+        ], [
+            'id_duenio_actual.required' => 'Debe seleccionar al dueño actual.',
+            'id_puesto.required'        => 'Debe seleccionar un puesto.',
+            'id_nuevo_duenio.required'  => 'Debe seleccionar al nuevo dueño.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 400);
+        }
+
+        // Procesar la transferencia del puesto
+        $puesto = Puesto::where('id_puesto', $request->input('id_puesto'))->first();
+        
+        if (!$puesto) {
+            return response()->json(['error' => 'El puesto especificado no existe.'], 404);
+        }
+
+        $puesto->id_socio = $request->input('id_nuevo_duenio');
+        $puesto->save();
+
+        return response()->json(["data" => $puesto, "message" => "Transferencia registrada correctamente"]);
+    }
+
+
 }
