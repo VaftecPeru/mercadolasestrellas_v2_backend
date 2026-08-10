@@ -19,8 +19,8 @@ Route::group(['prefix' => 'v1'], function () {
     Route::get('/blocks', [BlockController::class, 'index']);
     Route::post('/blocks', [BlockController::class, 'store']);
 
-    Route::get('/giros-negocio', [GiroNegocioController::class, 'index']);
-    Route::post('/giros-negocio', [GiroNegocioController::class, 'store']);
+    Route::get('/giro-negocios', [GiroNegocioController::class, 'index']);
+    Route::post('/giro-negocios', [GiroNegocioController::class, 'store']);
 
     Route::get('/inquilinos', [InquilinoController::class, 'index']);
     Route::post('/inquilinos', [InquilinoController::class, 'store']);
@@ -42,9 +42,14 @@ Route::group(['prefix' => 'v1'], function () {
     Route::delete('/cuotas/{id}', [CuotaController::class, 'destroy']);
     Route::get('/cuotas/exportar', [CuotaController::class, 'export']);
     Route::get('/cuotas/exportar-pdf', [CuotaController::class, 'exportPDF']);
+
+
+
     Route::get('/socios', [SocioController::class, 'index']);
     Route::get('/socios/seleccionar', [SocioController::class, 'seleccionarSocio']);
     Route::get('/socios/puestos', [SocioController::class, 'listarPuestos']);
+
+    Route::get('/socios/ver-puestos', [SocioController::class, 'listarPuestos']);
     Route::post('/socios', [SocioController::class, 'store']);
     Route::put('/socios/{id_socio}', [SocioController::class, 'update']);
     Route::delete('/socios/{id_socio}', [SocioController::class, 'destroy']);
@@ -72,6 +77,7 @@ Route::group(['prefix' => 'v1'], function () {
     Route::delete('/puestos/{id_puesto}', [PuestoController::class, 'destroy']);
     Route::get('/puestos/exportar', [PuestoController::class, 'export']);
     Route::get('/puestos/exportar-pdf', [PuestoController::class, 'exportPDF']);
+    Route::post('/puestos/transferir', [PuestoController::class, 'transferir']);
 
     Route::get('/servicios', [ServicioController::class, 'index']);
     Route::get('/servicios/multa-inasistencia', [ServicioController::class, 'consultarImporteMultaInasistencia']);
