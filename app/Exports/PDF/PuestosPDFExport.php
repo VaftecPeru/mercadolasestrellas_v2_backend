@@ -10,6 +10,7 @@ class PuestosPDFExport {
   public function generatePDF() {
 
     $puestos = Puesto::with([
+      'socio.persona',
       'socio.usuario',
       'block',
       'gironegocio',
