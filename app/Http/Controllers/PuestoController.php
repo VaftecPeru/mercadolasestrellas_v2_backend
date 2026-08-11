@@ -26,6 +26,7 @@ class PuestoController extends Controller
                 DB::raw("left(numero_puesto, 1) as npuesto_letra"),
                 DB::raw("lpad(substring_index(numero_puesto, '-', -1), 2, '0') as npuesto_numero")
             )
+            ->with(['socio.persona', 'gironegocio', 'block', 'inquilino']) // Cargar relaciones para evitar N+1
             ->where('puestos.activo', true);
 
         if (isset($request->id_gironegocio)) {
