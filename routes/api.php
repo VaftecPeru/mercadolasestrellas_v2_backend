@@ -28,7 +28,7 @@ Route::group(['prefix' => 'v1'], function () {
     Route::delete('/inquilinos/{id_inquilino}', [InquilinoController::class, 'destroy']);
 
     Route::get('/setup/bancos', [SetupController::class, 'indexBanco']);
-    Route::get('/setup/bancos-cuentas', [SetupController::class, 'indexBancoCuenta']);
+    Route::get('/setup/banco-cuentas', [SetupController::class, 'indexBancoCuenta']);
     Route::get('/setup/modulos-web', [SetupController::class, 'indexModuloWeb']);
 
     Route::get('/deudas', [DeudaController::class, 'index']);

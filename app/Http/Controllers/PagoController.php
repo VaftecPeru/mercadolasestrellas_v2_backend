@@ -61,10 +61,20 @@ class PagoController extends Controller
         }
 
         $paginate = Pago::with(['socio.persona']) // Cargar relaciones para evitar N+1
-            ->orderBy('fecha_registro', 'desc')
-            ->paginate($per_page);
+            ->select('pagos.*')
+            ->join('socios', 'pagos.id_socio', 'socios.id_socio')
+            ->join('personas', 'socios.id_socio', 'personas.id_persona')
+            ->orderBy('pagos.fecha_registro', 'desc');
 
-        return new PagoCollection($paginate);
+        // Filtro de búsqueda por nombre del socio
+        if (isset($request->search) && !empty($request->search)) {
+            $texto = strtr(utf8_decode($request->search), utf8_decode('àáâãäçèéêëìíîïñòóôõöùúûüýÿÀÁÂÃÄÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ'), 'aaaaaceeeeiiiinooooouuuuyyAAAAACEEEEIIIINOOOOOUUUUY');
+            $texto = strtr(utf8_decode($texto), utf8_decode('àáâãäçèéêëìíîïññòóôõöùúûüýÿÀÁÂÃÄÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ'), 'aaaaaceeeeiiiin?ooooouuuuyyAAAAACEEEEIIIINOOOOOUUUUY');
+            $texto = str_replace(' ', '%', $texto);
+            $paginate->whereRaw("upper(personas.nombre_completo) LIKE upper(?)", ['%'.$texto.'%']);
+        }
+
+        return new PagoCollection($paginate->paginate($per_page));
     }
 
 
