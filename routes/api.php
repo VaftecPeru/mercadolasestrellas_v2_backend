@@ -34,6 +34,7 @@ Route::group(['prefix' => 'v1'], function () {
     Route::get('/deudas', [DeudaController::class, 'index']);
     Route::get('/deudas/pendientes', [DeudaController::class, 'deudaPendientes']);
     Route::post('/deudas/multa-inasistencia', [DeudaController::class, 'registrarMultaInasistencia']);
+    Route::post('/deudas/registrar-multa-inasistencia', [DeudaController::class, 'registrarMultaInasistencia']); 
 
     Route::get('/cuotas', [CuotaController::class, 'index']);
     Route::post('/cuotas', [CuotaController::class, 'store']);
@@ -81,6 +82,7 @@ Route::group(['prefix' => 'v1'], function () {
 
     Route::get('/servicios', [ServicioController::class, 'index']);
     Route::get('/servicios/multa-inasistencia', [ServicioController::class, 'consultarImporteMultaInasistencia']);
+    Route::get('/servicios/consultar-importe-multa-inasistencia', [ServicioController::class, 'consultarImporteMultaInasistencia']); 
     Route::post('/servicios', [ServicioController::class, 'store']);
     Route::put('/servicios/{id_servicio}', [ServicioController::class, 'update']);
     Route::delete('/servicios/{id_servicio}', [ServicioController::class, 'destroy']);
