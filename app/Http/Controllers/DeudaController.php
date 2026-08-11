@@ -75,69 +75,71 @@ class DeudaController extends Controller
             return response()->json(['error' => $validator->errors()->first()], 400);
         }
 
-      
-        $servicio = Servicio::where('nombre','Multa por inasistencia')->first();
+        DB::beginTransaction();
+        try {
+            // 1. Obtener o crear el servicio "Multa por inasistencia"
+            $servicio = Servicio::where('nombre','Multa por inasistencia')->first();
 
-        if (!$servicio) {
-           
-            $servicio = new Servicio();
-            $servicio->nombre = 'Multa por inasistencia';
-            $servicio->tipo_servicio = 2;
-            $servicio->costo_unitario = $request->input('importe');
-            $servicio->fecha_registro = date('Y-m-d');
-            $servicio->save();
-        } else {
-            
-            if ($servicio->costo_unitario != $request->input('importe')) {
+            if (!$servicio) {
+                $servicio = new Servicio();
+                $servicio->nombre = 'Multa por inasistencia';
+                $servicio->tipo_servicio = 2;
                 $servicio->costo_unitario = $request->input('importe');
+                $servicio->fecha_registro = date('Y-m-d');
                 $servicio->save();
+            } else {
+                // Actualizar el costo si cambió
+                if ($servicio->costo_unitario != $request->input('importe')) {
+                    $servicio->costo_unitario = $request->input('importe');
+                    $servicio->save();
+                }
             }
-        }
 
-        $cuota = new Cuota();
-        $cuota->fecha_emision = date('Y-m-d');
-       
-        $cuota->fecha_vencimiento = date('Y-m-d', strtotime($cuota->fecha_emision . ' + 30 days'));
-        $cuota->importe = $request->input('importe');
-        $cuota->global = false;
-        $cuota->save();
+            // 2. Crear la cuota para esta multa
+            $cuota = new Cuota();
+            $cuota->fecha_emision = date('Y-m-d');
+            $cuota->fecha_vencimiento = date('Y-m-d', strtotime('+30 days'));
+            $cuota->importe = $request->input('importe');
+            $cuota->global = false;
+            $cuota->save();
 
-        $puesto_cuota = new PuestoCuota();
-        $puesto_cuota->id_puesto = $request->input('id_puesto');
-        $puesto_cuota->id_cuota = $cuota->id_cuota;
-        $puesto_cuota->estado = "Pendiente";
-        $puesto_cuota->save();
+            // 3. Asignar la cuota al puesto
+            $puesto_cuota = new PuestoCuota();
+            $puesto_cuota->id_puesto = $request->input('id_puesto');
+            $puesto_cuota->id_cuota = $cuota->id_cuota;
+            $puesto_cuota->estado = "Pendiente";
+            $puesto_cuota->save();
 
-        $cuota_servicio = new CuotaServicios();
-        $cuota_servicio->id_cuota = $cuota->id_cuota;
-        $cuota_servicio->id_servicio = $servicio->id_servicio;
-        $cuota_servicio->save();
+            // 4. Registrar el servicio en la cuota
+            $cuota_servicio = new CuotaServicios();
+            $cuota_servicio->id_cuota = $cuota->id_cuota;
+            $cuota_servicio->id_servicio = $servicio->id_servicio;
+            $cuota_servicio->importe = $request->input('importe');
+            $cuota_servicio->save();
 
-        $deuda = Deuda::where('id_socio', $request->input('id_socio'))
-            ->where('id_puesto', $request->input('id_puesto'))
-            ->first();
-        
-        if (!$deuda) {
+            // 5. Crear una nueva deuda para esta cuota (siguiendo el patrón del sistema)
             $deuda = new Deuda();
             $deuda->id_socio = $request->input('id_socio');
             $deuda->id_puesto = $request->input('id_puesto');
+            $deuda->id_cuota = $cuota->id_cuota;
             $deuda->total_deuda = $request->input('importe');
+            $deuda->fecha_registro = now();
             $deuda->save();
-        } else {
-            
-            $deuda->total_deuda += $request->input('importe');
-            $deuda->save();
+
+            // 6. Registrar el detalle de la deuda
+            $deuda_cuota = new DeudaCuota();
+            $deuda_cuota->id_deuda = $deuda->id_deuda;
+            $deuda_cuota->id_cuota_servicio = $cuota_servicio->id_cuota_servicio;
+            $deuda_cuota->monto = $request->input('importe');
+            $deuda_cuota->a_cuenta = 0;
+            $deuda_cuota->estado = "Pendiente";
+            $deuda_cuota->save();
+
+            DB::commit();
+            return response()->json(["message"=>"Multa por inasistencia registrada correctamente"]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Error al registrar la multa: ' . $e->getMessage()], 500);
         }
-
-        
-        $deuda_cuota = new DeudaCuota();
-        $deuda_cuota->id_deuda = $deuda->id_deuda;
-        $deuda_cuota->id_cuota_servicio = $cuota_servicio->id_cuota_servicio;
-        $deuda_cuota->monto = $request->input('importe');
-        $deuda_cuota->a_cuenta = 0;
-        $deuda_cuota->estado = "Pendiente";
-        $deuda_cuota->save();
-
-        return response()->json(["message"=>"Multa por inasistencia registrada correctamente"]);
     }
 }
