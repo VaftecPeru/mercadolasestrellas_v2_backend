@@ -13,7 +13,7 @@ class ReporteCuotasMetradoPDFExport {
     public function generatePDF($id_cuota) {
 
         $cuota = Cuota::find($id_cuota);
-        $fecha_emision = $cuota->fecha_registro;
+        $fecha_emision = $cuota->fecha_emision;
         $fecha_vencimiento = $cuota->fecha_vencimiento;
 
         $deudas = Deuda::whereExists(function ($query) use ($id_cuota) {

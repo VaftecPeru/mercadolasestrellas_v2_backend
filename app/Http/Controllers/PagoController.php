@@ -447,7 +447,7 @@ class PagoController extends Controller
 
     {
 
-        $deuda_cuota = DeudaCuota::select('deuda_cuotas.a_cuenta', 'cuotas.fecha_registro', 'servicios.descripcion as servicio', 'cuotas.importe')
+        $deuda_cuota = DeudaCuota::select('deuda_cuotas.a_cuenta', 'cuotas.fecha_emision', 'servicios.descripcion as servicio', 'cuotas.importe')
 
             ->join('cuotas', 'deuda_cuotas.id_cuota', '=', 'cuotas.id_cuota')
 
