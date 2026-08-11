@@ -52,24 +52,19 @@ class PagoController extends Controller
 
 
 
-    public function index()
-
+    public function index(Request $request)
     {
-
         $per_page = 15;
 
         if (isset($request->per_page)) {
-
             $per_page = $request->per_page;
-
         }
 
-        $paginate = Pago::orderBy('fecha_registro', 'desc')->paginate($per_page);
-
-
+        $paginate = Pago::with(['socio.persona']) // Cargar relaciones para evitar N+1
+            ->orderBy('fecha_registro', 'desc')
+            ->paginate($per_page);
 
         return new PagoCollection($paginate);
-
     }
 
 

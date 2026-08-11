@@ -24,7 +24,8 @@ class PagosPDFExport {
       return [
           'id' => $pago->id_pago?? '------', 
           'numero_puesto' => data_get($pago, 'Socio.Puestos.0.numero_puesto', '------'), 
-          'socio' => data_get($pago, 'Socio.Usuario.nombre_usuario', '------'), 
+          // Obtener nombre del socio desde la tabla personas 
+          'socio' => data_get($pago, 'Socio.Persona.nombre_completo', '------') ?: data_get($pago, 'Socio.Usuario.nombre_usuario', '------'),
           'dni' => data_get($pago, 'Socio.Persona.dni', '------'), 
           'fecha_registro' => $pago->fecha_registro ?? '------', 
           'telefono' => data_get($pago, 'Socio.Persona.telefono', '------'), 
