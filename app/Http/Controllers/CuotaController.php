@@ -221,6 +221,97 @@ class CuotaController extends Controller
         return (new CuotaPDFExport())->generatePDF();
     }
 
+    public function storePorMultiplesPuestos(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'fecha_emision' => 'required|date',
+            'fecha_vencimiento' => 'required|date',
+            'puestos' => 'required|array|min:1',
+            'puestos.*' => 'required|integer|exists:puestos,id_puesto',
+            'servicios' => 'required|array|min:1'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 400);
+        }
+
+        $puestos = Puesto::whereIn('id_puesto', $request->puestos)
+            ->where('activo', 1)
+            ->get();
+
+        if ($puestos->isEmpty()) {
+            return response()->json(['error' => 'No se encontraron puestos válidos.'], 400);
+        }
+
+        $servicios = Servicio::whereIn('id_servicio', $request->servicios)
+            ->where('activo', 1)
+            ->get();
+
+        if ($servicios->isEmpty()) {
+            return response()->json(['error' => 'No se encontraron servicios válidos.'], 400);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $cuota = new Cuota();
+            $cuota->fecha_emision = $request->fecha_emision;
+            $cuota->fecha_vencimiento = $request->fecha_vencimiento;
+            $cuota->global = false;
+            $cuota->importe = 0;
+            $cuota->save();
+
+            // Crear cuota_servicios
+            $cuotaServicios = [];
+            foreach ($servicios as $servicio) {
+                $cuota_servicio = new CuotaServicios();
+                $cuota_servicio->id_cuota = $cuota->id_cuota;
+                $cuota_servicio->id_servicio = $servicio->id_servicio;
+                $cuota_servicio->importe = $servicio->costo_unitario;
+                $cuota_servicio->save();
+                $cuotaServicios[$servicio->id_servicio] = $cuota_servicio;
+            }
+
+            // Crear deudas por cada puesto
+            foreach ($puestos as $puesto) {
+                if (!$puesto->id_socio) {
+                    continue;
+                }
+
+                $deuda = new Deuda();
+                $deuda->id_socio = $puesto->id_socio;
+                $deuda->id_puesto = $puesto->id_puesto;
+                $deuda->id_cuota = $cuota->id_cuota;
+                $deuda->total_deuda = 0;
+                $deuda->fecha_registro = Carbon::now();
+                $deuda->save();
+
+                foreach ($servicios as $servicio) {
+                    $costo_servicio = $servicio->tipo_servicio == 3
+                        ? $servicio->costo_unitario * $puesto->area
+                        : $servicio->costo_unitario;
+
+                    $cuota->increment('importe', $costo_servicio);
+                    $deuda->increment('total_deuda', $costo_servicio);
+
+                    $deuda_cuota = new DeudaCuota();
+                    $deuda_cuota->id_deuda = $deuda->id_deuda;
+                    $deuda_cuota->id_cuota_servicio = $cuotaServicios[$servicio->id_servicio]->id_cuota_servicio;
+                    $deuda_cuota->monto = $costo_servicio;
+                    $deuda_cuota->estado = 'Pendiente';
+                    $deuda_cuota->a_cuenta = 0;
+                    $deuda_cuota->save();
+                }
+            }
+
+            DB::commit();
+            return response()->json(['data' => $cuota, 'message' => 'Cuota creada correctamente para ' . $puestos->count() . ' puestos']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Error al crear la cuota: ' . $e->getMessage()], 500);
+        }
+    }
+
     public function update(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [

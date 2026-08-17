@@ -39,6 +39,7 @@ Route::group(['prefix' => 'v1'], function () {
     Route::get('/cuotas', [CuotaController::class, 'index']);
     Route::post('/cuotas', [CuotaController::class, 'store']);
     Route::post('/cuotas/por-puestos', [CuotaController::class, 'storePorPuesto']);
+    Route::post('/cuotas/por-multiples-puestos', [CuotaController::class, 'storePorMultiplesPuestos']);
     Route::put('/cuotas/{id}', [CuotaController::class, 'update']);
     Route::delete('/cuotas/{id}', [CuotaController::class, 'destroy']);
     Route::get('/cuotas/exportar', [CuotaController::class, 'export']);
