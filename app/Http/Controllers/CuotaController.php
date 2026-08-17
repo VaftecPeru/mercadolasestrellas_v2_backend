@@ -63,10 +63,9 @@ class CuotaController extends Controller
         }
 
         $listado = Socio::select('socios.id_socio', 'puestos.id_puesto', 'puestos.area')
-            ->join('usuarios', 'usuarios.id_usuario', 'socios.id_usuario')
             ->join('puestos', 'puestos.id_socio', 'socios.id_socio')
-            ->where('usuarios.estado', 1)
-            ->where('puestos.estado', 2)
+            ->where('socios.estado', 1)    // Socio activo (1=activo, 0=retirado)
+            ->where('puestos.activo', 1)   // Puesto activo (1=activo, 0=inactivo)
             ->get();
 
         if ($listado->isEmpty()) {
@@ -90,6 +89,18 @@ class CuotaController extends Controller
         $cuota->importe = 0;
         $cuota->save();
 
+        // Crear cuota_servicios
+        $cuotaServicios = [];
+        foreach ($servicios as $servicio) {
+            $cuota_servicio = new CuotaServicios();
+            $cuota_servicio->id_cuota = $cuota->id_cuota;
+            $cuota_servicio->id_servicio = $servicio->id_servicio;
+            $cuota_servicio->importe = $servicio->costo_unitario;  // Usar costo base
+            $cuota_servicio->save();
+            $cuotaServicios[$servicio->id_servicio] = $cuota_servicio;
+        }
+
+        // Crear deudas y deuda_cuotas por cada socio
         foreach ($listado as $socio) {
             $deuda = new Deuda();
             $deuda->id_socio = $socio->id_socio;
@@ -100,22 +111,18 @@ class CuotaController extends Controller
             $deuda->save();
 
             foreach ($servicios as $servicio) {
+                // Calcular costo por socio
                 $costo_servicio = $servicio->tipo_servicio == 3
                     ? $servicio->costo_unitario * $socio->area
                     : $servicio->costo_unitario;
 
-                $cuota_servicio = new CuotaServicios();
-                $cuota_servicio->id_cuota = $cuota->id_cuota;
-                $cuota_servicio->id_servicio = $servicio->id_servicio;
-                $cuota_servicio->importe = $costo_servicio;
-                $cuota_servicio->save();
-
                 $cuota->increment('importe', $costo_servicio);
                 $deuda->increment('total_deuda', $costo_servicio);
 
+                // Usar el cuota_servicio ya creado
                 $deuda_cuota = new DeudaCuota();
                 $deuda_cuota->id_deuda = $deuda->id_deuda;
-                $deuda_cuota->id_cuota_servicio = $cuota_servicio->id_cuota_servicio;
+                $deuda_cuota->id_cuota_servicio = $cuotaServicios[$servicio->id_servicio]->id_cuota_servicio;
                 $deuda_cuota->monto = $costo_servicio;
                 $deuda_cuota->estado = 'Pendiente';
                 $deuda_cuota->a_cuenta = 0;
