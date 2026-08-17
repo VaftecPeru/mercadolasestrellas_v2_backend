@@ -28,22 +28,22 @@ class CuotaController extends Controller
         $per_page = $request->get('per_page', 15);
         $query = Cuota::with(['deudas', 'servicios.servicio']);
 
-
-        
         $validator = Validator::make($request->all(), [
             'anio' => 'nullable|digits:4',
-            'mes' => 'nullable|digits:2',
+            'mes' => 'nullable|digits:1,2',  
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['error' => 'Parámetros "anio" o "mes" inválidos. Formato esperado: anio=YYYY, mes=MM'], 400);
+            return response()->json(['error' => 'Parámetros "anio" o "mes" inválidos. Formato esperado: anio=YYYY, mes=M o MM'], 400);
         }
 
-        if ($request->filled('anio')) {
+        // Aplicar filtro de año
+        if ($request->filled('anio') && $request->anio !== '' && $request->anio !== null) {
             $query->whereRaw(Util::compareDateYear('fecha_emision', $request->anio));
         }
 
-        if ($request->filled('mes')) {
+        // Aplicar filtro de mes
+        if ($request->filled('mes') && $request->mes !== '' && $request->mes !== null) {
             $query->whereRaw(Util::compareDateMonth('fecha_emision', $request->mes));
         }
 
