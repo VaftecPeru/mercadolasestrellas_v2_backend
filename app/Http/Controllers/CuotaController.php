@@ -175,6 +175,13 @@ class CuotaController extends Controller
         $cuota->importe = 0;
         $cuota->save();
 
+        // Crear relación en puesto_cuotas
+        $puesto_cuota = new PuestoCuota();
+        $puesto_cuota->id_puesto = $puesto->id_puesto;
+        $puesto_cuota->id_cuota = $cuota->id_cuota;
+        $puesto_cuota->estado = 1;
+        $puesto_cuota->save();
+
         $deuda = new Deuda();
         $deuda->id_socio = $socio->id_socio;
         $deuda->id_puesto = $puesto->id_puesto;
@@ -270,6 +277,15 @@ class CuotaController extends Controller
                 $cuota_servicio->importe = $servicio->costo_unitario;
                 $cuota_servicio->save();
                 $cuotaServicios[$servicio->id_servicio] = $cuota_servicio;
+            }
+
+            // Crear relaciones en puesto_cuotas
+            foreach ($puestos as $puesto) {
+                $puesto_cuota = new PuestoCuota();
+                $puesto_cuota->id_puesto = $puesto->id_puesto;
+                $puesto_cuota->id_cuota = $cuota->id_cuota;
+                $puesto_cuota->estado = 1;
+                $puesto_cuota->save();
             }
 
             // Crear deudas por cada puesto
