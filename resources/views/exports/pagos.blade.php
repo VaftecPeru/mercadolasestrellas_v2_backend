@@ -47,7 +47,7 @@
         <th>Telefono</th>
         <th>Correo</th>
         <th>A cuenta</th>
-        <th>Monto total</th>
+        <th>Monto Actual</th>
       </tr>
     </thead>
     <tbody>
@@ -61,7 +61,7 @@
           <td>{{ $pago['telefono'] }}</td>
           <td>{{ $pago['correo'] }}</td>
           <td>{{ $pago['a_cuenta'] }}</td>
-          <td>{{ $pago['monto_total'] }}</td>
+          <td>{{ $pago['monto_actual'] }}</td>
         </tr>
       @endforeach
     </tbody>
