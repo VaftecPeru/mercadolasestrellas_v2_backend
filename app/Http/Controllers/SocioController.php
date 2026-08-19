@@ -26,24 +26,24 @@ class SocioController extends Controller
         }
 
         $listado = Socio::with(['Persona', 'Usuario', 'Puestos.Block', 'Puestos.Gironegocio', 'Puestos.Inquilino'])
-            ->select('socios.*','d.numero_puesto','d.id_puesto')
-            ->leftJoin('usuarios as b','socios.id_usuario','b.id_usuario')
-            ->join('personas as c','socios.id_socio','c.id_persona')
-            ->leftJoin('puestos as d','socios.id_socio','d.id_socio')
             ->where('socios.estado', '1');
 
         if (isset($request->nombre_socio)) {
             $texto = strtr(utf8_decode($request->nombre_socio), utf8_decode('àáâãäçèéêëìíîïñòóôõöùúûüýÿÀÁÂÃÄÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ'), 'aaaaaceeeeiiiinooooouuuuyyAAAAACEEEEIIIINOOOOOUUUUY');
             $texto = strtr(utf8_decode($texto), utf8_decode('àáâãäçèéêëìíîïññòóôõöùúûüýÿÀÁÂÃÄÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ'), 'aaaaaceeeeiiiin?ooooouuuuyyAAAAACEEEEIIIINOOOOOUUUUY');
             $texto = str_replace(' ', '%', $texto);
-            $listado->whereRaw("upper(concat(c.nombre_completo)) LIKE upper( ? )", ['%'.$texto.'%']);
+            $listado->whereHas('persona', function($query) use ($texto) {
+                $query->whereRaw("upper(nombre_completo) LIKE upper( ? )", ['%'.$texto.'%']);
+            });
         }
 
         if (isset($request->numero_puesto)) {
-            $listado->whereRaw("upper(d.numero_puesto) LIKE upper( ? )", ['%'.$request->numero_puesto.'%']);
+            $listado->whereHas('puestos', function($query) use ($request) {
+                $query->whereRaw("upper(numero_puesto) LIKE upper( ? )", ['%'.$request->numero_puesto.'%']);
+            });
         }
 
-        $listado->orderBy('numero_puesto', 'asc');
+        $listado->orderBy('socios.id_socio', 'asc');
 
         return new SocioCollection($listado->paginate($per_page));
     }
@@ -147,18 +147,12 @@ class SocioController extends Controller
         $usuario->id_rol = 2;
         $usuario->save();
 
-        // Registro de socio
+        // Registro de socio (solo ID, fecha y estado - los datos personales vienen de Persona)
         $socio = new Socio();
         $socio->id_socio = $persona->id_persona;
         $socio->id_usuario = $persona->id_persona;
-        $socio->nombres = $request->input('nombre');
-        $socio->apellido_paterno = $request->input('apellido_paterno');
-        $socio->apellido_materno = $request->input('apellido_materno');
-        $socio->dni = $request->input('dni');
-        $socio->correo = $request->input('correo');
-        $socio->telefono = $request->input('telefono');
-        $socio->direccion = $request->input('direccion');
-        $socio->sexo = $request->input('sexo');
+        $socio->fecha_registro = $request->input('fecha_registro');
+        $socio->estado = $request->input('estado');
         $socio->save();
 
         // Se asigna el puesto al socio
@@ -229,17 +223,10 @@ class SocioController extends Controller
         $persona->nombre_completo = $nombre_completo;
         $persona->update();
 
-        // Actualizar datos del socio
+        // Actualizar estado del socio (los datos personales ya están en persona)
         $socio = Socio::where('id_socio', $id_socio)->first();
-        $socio->nombres = $request->input('nombre');
-        $socio->apellido_paterno = $request->input('apellido_paterno');
-        $socio->apellido_materno = $request->input('apellido_materno');
-        $socio->correo = $request->input('correo');
-        $socio->direccion = $request->input('direccion');
-        $socio->dni = $request->input('dni');
+        $socio->estado = $request->input('estado');
         $socio->fecha_registro = $request->input('fecha_registro');
-        $socio->sexo = $request->input('sexo');
-        $socio->telefono = $request->input('telefono');
         $socio->update();
 
         // Actualizar datos de usuario (si existe)

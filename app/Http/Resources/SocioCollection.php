@@ -15,10 +15,8 @@ class SocioCollection extends ResourceCollection
      */
     public function toArray($request)
     {
-        $paginator = $this->resource;
-
         return [
-            'data' => $this->collection->transform(function ($socio) {
+            'data' => $this->collection->map(function ($socio) {
                 // Obtener los puestos del socio desde la relación (evita N+1 del JOIN)
                 $puestos = $socio->relationLoaded('puestos')
                     ? $socio->puestos
@@ -27,22 +25,27 @@ class SocioCollection extends ResourceCollection
                         ->get();
 
                 $deuda = 0;
-                if($socio->id_puesto) {
-                    $query = DB::select("select sum(total_deuda) deuda
-                        from deudas where id_puesto = ".$socio->id_puesto);
-                    $deudaSum = collect($query)->first();
-                    $deuda_total = $deudaSum->deuda ? $deudaSum->deuda : 0;
+                // Calcular deuda sumando todos los puestos del socio
+                if ($puestos->isNotEmpty()) {
+                    foreach ($puestos as $puesto) {
+                        $query = DB::select("select sum(total_deuda) deuda
+                            from deudas where id_puesto = ?", [$puesto->id_puesto]);
+                        $deudaSum = collect($query)->first();
+                        $deuda_total = $deudaSum->deuda ? $deudaSum->deuda : 0;
 
-                    $query = DB::select("select sum(importe) pago from detalle_pagos
-                        where id_puesto = ".$socio->id_puesto);
-                    $pago = collect($query)->first();
-                    $pago_total = $pago->pago ? $pago->pago : 0;
-                    $deudaTotal = $deuda_total - $pago_total;
+                        $query = DB::select("select sum(importe) pago from detalle_pagos
+                            where id_puesto = ?", [$puesto->id_puesto]);
+                        $pago = collect($query)->first();
+                        $pago_total = $pago->pago ? $pago->pago : 0;
+                        $deudaTotal = $deuda_total - $pago_total;
 
-                    if((float)$deudaTotal == 0) {
-                        $deuda = 0;
-                    } else {
-                        $deuda = number_format((float)$deudaTotal, 2, '.', "");
+                        if((float)$deudaTotal > 0) {
+                            $deuda += (float)$deudaTotal;
+                        }
+                    }
+                    
+                    if($deuda > 0) {
+                        $deuda = number_format($deuda, 2, '.', "");
                     }
                 }
 
@@ -70,16 +73,7 @@ class SocioCollection extends ResourceCollection
                     'fecha_registro' => $socio->fecha_registro ? $socio->fecha_registro : null,
                     'deuda' => $deuda,
                 ];
-            }),
-            'links' => [
-                'self' => url('/socios'),
-            ],
-            'meta' => [
-                'current_page' => method_exists($paginator, 'currentPage') ? $paginator->currentPage() : 1,
-                'last_page' => method_exists($paginator, 'lastPage') ? $paginator->lastPage() : 1,
-                'per_page' => method_exists($paginator, 'perPage') ? $paginator->perPage() : $this->collection->count(),
-                'total' => method_exists($paginator, 'total') ? $paginator->total() : $this->collection->count(),
-            ],
+            })->values(),
         ];
     }
 }

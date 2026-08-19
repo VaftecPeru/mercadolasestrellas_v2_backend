@@ -13,15 +13,29 @@ class SocioResource extends JsonResource
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
-    {//resource tiene los datos que jalan en otras tablas
+    {
+        // Resource obtiene datos mediante relaciones con Persona
         return [
-            // 'id_socio'=>$this->id_socio,
-            'id_usuario'=>$this->id_usuario,
-            'tipo_persona' => $this->tipo_persona, 
-            'saldo' => $this->saldo, 
-            'fecha_registro'=>$this->fecha_registro,
-            'usuario' => new UsuarioResource($this->usuario), // Si estás incluyendo socios
-            'deuda' => new DeudaResource($this->deuda), // Si estás incluyendo socios
+            'id_socio' => $this->id_socio,
+            'id_usuario' => $this->id_usuario,
+            'estado' => $this->estado,
+            'fecha_registro' => $this->fecha_registro,
+            
+            // Datos personales desde la relación Persona
+            'nombre_completo' => $this->persona ? $this->persona->nombre_completo : null,
+            'nombre' => $this->persona ? $this->persona->nombre : null,
+            'apellido_paterno' => $this->persona ? $this->persona->apellido_paterno : null,
+            'apellido_materno' => $this->persona ? $this->persona->apellido_materno : null,
+            'dni' => $this->persona ? $this->persona->dni : null,
+            'correo' => $this->persona ? $this->persona->correo : null,
+            'telefono' => $this->persona ? $this->persona->telefono : null,
+            'direccion' => $this->persona ? $this->persona->direccion : null,
+            'sexo' => $this->persona ? $this->persona->sexo : null,
+            'tipo_persona' => $this->persona ? $this->persona->tipo_persona : null,
+            
+            // Relaciones
+            'usuario' => new UsuarioResource($this->whenLoaded('usuario')),
+            'deuda' => new DeudaResource($this->whenLoaded('deuda')),
         ];
     }
 }

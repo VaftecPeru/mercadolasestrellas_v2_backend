@@ -17,17 +17,26 @@ class Socio extends Model
     protected $fillable = [
         'id_socio',
         'id_usuario',
-        'nombres',
-        'apellido_paterno',
-        'apellido_materno',
-        'dni',
-        'correo',
-        'telefono',
-        'direccion',
-        'sexo',
         'fecha_registro',
         'estado'
     ];
+
+    // Eager load persona por defecto para evitar N+1 queries
+    protected $with = ['persona'];
+
+    // Accessors para obtener datos de persona sin duplicar en BD
+    // COMENTADO: Interfiere con paginación
+    // protected $appends = [
+    //     'nombres',
+    //     'apellido_paterno', 
+    //     'apellido_materno',
+    //     'dni',
+    //     'correo',
+    //     'telefono',
+    //     'direccion',
+    //     'sexo',
+    //     'nombre_completo'
+    // ];
 
     public function Usuario()
     {
@@ -57,5 +66,52 @@ class Socio extends Model
     public function Persona()
     {
         return $this->belongsTo(Persona::class, 'id_socio', 'id_persona');
+    }
+
+    // Accessors: Obtener datos desde Persona
+    public function getNombresAttribute()
+    {
+        return $this->persona->nombre ?? $this->attributes['nombres'] ?? '';
+    }
+
+    public function getApellidoPaternoAttribute()
+    {
+        return $this->persona->apellido_paterno ?? $this->attributes['apellido_paterno'] ?? '';
+    }
+
+    public function getApellidoMaternoAttribute()
+    {
+        return $this->persona->apellido_materno ?? $this->attributes['apellido_materno'] ?? '';
+    }
+
+    public function getDniAttribute()
+    {
+        return $this->persona->dni ?? $this->attributes['dni'] ?? '';
+    }
+
+    public function getCorreoAttribute()
+    {
+        return $this->persona->correo ?? $this->attributes['correo'] ?? '';
+    }
+
+    public function getTelefonoAttribute()
+    {
+        return $this->persona->telefono ?? $this->attributes['telefono'] ?? '';
+    }
+
+    public function getDireccionAttribute()
+    {
+        return $this->persona->direccion ?? $this->attributes['direccion'] ?? '';
+    }
+
+    public function getSexoAttribute()
+    {
+        return $this->persona->sexo ?? $this->attributes['sexo'] ?? '';
+    }
+
+    public function getNombreCompletoAttribute()
+    {
+        return $this->persona->nombre_completo ?? 
+               ($this->nombres . ' ' . $this->apellido_paterno . ' ' . $this->apellido_materno);
     }
 }
