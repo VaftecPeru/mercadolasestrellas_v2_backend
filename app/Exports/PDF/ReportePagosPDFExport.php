@@ -21,8 +21,8 @@ class ReportePagosPDFExport {
                 $q->where('id_puesto', $filtro_id);
             });
         } else {
-            $socio = Socio::find($filtro_id);
-            $nombre_reporte = "Socio: " . ($socio->nombres ?? "Socio") . " " . ($socio->apellido_paterno ?? "");
+            $socio = Socio::with('persona')->find($filtro_id);
+            $nombre_reporte = "Socio: " . ($socio->persona->nombre ?? "Socio") . " " . ($socio->persona->apellido_paterno ?? "");
             $query->where('id_socio', $filtro_id);
         }
 
