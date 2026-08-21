@@ -52,7 +52,7 @@ class SocioController extends Controller
     {
         $socios = Socio::join('personas as c','socios.id_socio','c.id_persona')
             ->where('socios.estado', '1')
-            ->select('socios.id_socio', 'c.nombre_completo', 'c.dni')
+            ->select('socios.id_socio', 'c.nombre_completo', 'c.dni', 'c.telefono', 'c.correo')
             ->get();
         
         return response()->json(["data" => $socios]);
