@@ -11,7 +11,6 @@ use App\Models\Usuario;
 use App\Models\Persona;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
@@ -132,25 +131,9 @@ class SocioController extends Controller
         $persona->nombre_completo = $nombre_completo;
         $persona->save();
 
-        // Registro de usuario
-        $usuario = new Usuario();
-        $usuario->id_usuario = $persona->id_persona;
-        $usuario->rol = 'Socio';
-        $usuario->nombre_usuario = $nombre_completo;
-
-        // La contraseña por defecto es el dni encriptado
-        $contrasenia = $request->input('dni');
-        $usuario->contrasenia = Hash::make($contrasenia);
-
-        $usuario->estado = $request->input('estado');
-        $usuario->fecha_registro = $request->input('fecha_registro');
-        $usuario->id_rol = 2;
-        $usuario->save();
-
         // Registro de socio (solo ID, fecha y estado - los datos personales vienen de Persona)
         $socio = new Socio();
         $socio->id_socio = $persona->id_persona;
-        $socio->id_usuario = $persona->id_persona;
         $socio->fecha_registro = $request->input('fecha_registro');
         $socio->estado = $request->input('estado');
         $socio->save();
