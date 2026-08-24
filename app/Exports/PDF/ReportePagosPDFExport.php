@@ -11,25 +11,37 @@ class ReportePagosPDFExport {
 
     public function generatePDF($filtro_id) {
 
-        $nombre_reporte = "";
+        $nombre_socio = "";
+        $nombre_bloque = "-";
+        $numero_puesto = "-";
+        $area = "-";
+        $giro_negocio = "-";
         $query = Pago::query();
 
         if (request()->has('id_puesto') && request()->id_puesto != "") {
-            $puesto = Puesto::find($filtro_id);
-            $nombre_reporte = "Puesto: " . ($puesto->numero_puesto ?? $filtro_id);
+            $puesto = Puesto::with(['socio.persona', 'block', 'gironegocio'])->find($filtro_id);
+            $numero_puesto = $puesto->numero_puesto ?? '-';
+            $area = $puesto->area ?? '-';
+            $nombre_bloque = $puesto->block ? $puesto->block->nombre : '-';
+            $giro_negocio = $puesto->gironegocio ? $puesto->gironegocio->nombre : '-';
+            $nombre_socio = $puesto->socio && $puesto->socio->persona
+                ? $puesto->socio->persona->nombre_completo
+                : '-';
             $query->whereHas('DetallePagos', function($q) use ($filtro_id) {
                 $q->where('id_puesto', $filtro_id);
             });
         } else {
             $socio = Socio::with('persona')->find($filtro_id);
-            $nombre_reporte = "Socio: " . ($socio->persona->nombre ?? "Socio") . " " . ($socio->persona->apellido_paterno ?? "");
+            $nombre_socio = $socio && $socio->persona
+                ? trim(($socio->persona->nombre ?? '') . ' ' . ($socio->persona->apellido_paterno ?? ''))
+                : "Socio";
             $query->where('id_socio', $filtro_id);
         }
 
         $meses = [
-            1 => 'ENERO', 2 => 'FEBRERO', 3 => 'MARZO', 4 => 'ABRIL',
-            5 => 'MAYO', 6 => 'JUNIO', 7 => 'JULIO', 8 => 'AGOSTO',
-            9 => 'SEPTIEMBRE', 10 => 'OCTUBRE', 11 => 'NOVIEMBRE', 12 => 'DICIEMBRE'
+            1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
+            5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
+            9 => 'Setiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
         ];
 
         $pagos = $query->get()
@@ -58,7 +70,11 @@ class ReportePagosPDFExport {
         $total = $query->sum('total_pago');
 
         $pdf = app(PDF::class)->loadView('exports.reporte_pagos', [
-            'nombre_socio' => $nombre_reporte,
+            'nombre_socio' => $nombre_socio,
+            'nombre_bloque' => $nombre_bloque,
+            'numero_puesto' => $numero_puesto,
+            'area' => $area,
+            'giro_negocio' => $giro_negocio,
             'pagos' => $pagos, 
             'total' => $total, 
         ]);

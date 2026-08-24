@@ -3,24 +3,64 @@
 namespace App\Exports;
 
 use App\Models\Pago;
+use App\Models\Puesto;
+use App\Models\Socio;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
-class ReportePagosExport implements FromCollection, WithHeadings, WithStyles, WithEvents, WithColumnFormatting
+class ReportePagosExport implements FromCollection, WithHeadings, WithStyles, WithEvents, WithColumnFormatting, WithStrictNullComparison
 {
     
     protected $filtro_id;
+    protected $encabezado = ['-', '-', '-', '-', '-'];
     private $count = 0;
 
     public function __construct($filtro_id)
     {
         $this->filtro_id = $filtro_id;
+        $this->encabezado = $this->resolveEncabezado();
+    }
+
+    private function resolveEncabezado()
+    {
+        $default = ['-', '-', '-', '-', '-'];
+
+        if (request()->has('id_puesto') && request()->id_puesto != "") {
+            $puesto = Puesto::with(['socio.persona', 'block', 'gironegocio'])->find($this->filtro_id);
+
+            if (!$puesto) {
+                return $default;
+            }
+
+            return [
+                $puesto->socio && $puesto->socio->persona ? $puesto->socio->persona->nombre_completo : '-',
+                $puesto->block ? $puesto->block->nombre : '-',
+                $puesto->numero_puesto ?? '-',
+                $puesto->area ?? '-',
+                $puesto->gironegocio ? $puesto->gironegocio->nombre : '-',
+            ];
+        }
+
+        $socio = Socio::with('persona')->find($this->filtro_id);
+
+        if (!$socio || !$socio->persona) {
+            return $default;
+        }
+
+        return [
+            trim(($socio->persona->nombre ?? '') . ' ' . ($socio->persona->apellido_paterno ?? '') . ' ' . ($socio->persona->apellido_materno ?? '')) ?: 'Socio',
+            '-',
+            '-',
+            '-',
+            '-',
+        ];
     }
 
     public function collection()
@@ -40,9 +80,9 @@ class ReportePagosExport implements FromCollection, WithHeadings, WithStyles, Wi
 
         $rows = [];
         $meses = [
-            1 => 'ENERO', 2 => 'FEBRERO', 3 => 'MARZO', 4 => 'ABRIL',
-            5 => 'MAYO', 6 => 'JUNIO', 7 => 'JULIO', 8 => 'AGOSTO',
-            9 => 'SEPTIEMBRE', 10 => 'OCTUBRE', 11 => 'NOVIEMBRE', 12 => 'DICIEMBRE'
+            1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
+            5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
+            9 => 'Setiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
         ];
 
         foreach ($pagosMap as $pago) {
@@ -77,8 +117,8 @@ class ReportePagosExport implements FromCollection, WithHeadings, WithStyles, Wi
             'Mes',
             'Fec. Pago',
             'Servicios',
-            'Monto (S/)',
-            'Pago (S/)',
+            'Monto (S/.)',
+            'Imp. Pagado (S/.)',
         ];
     }
 
@@ -104,15 +144,26 @@ class ReportePagosExport implements FromCollection, WithHeadings, WithStyles, Wi
     {
         return [
             AfterSheet::class => function(AfterSheet $event) {
+                // Inserta el bloque de cabecera (Nombre del socio, Bloque, Nro. Puesto, Area, Giro)
+                // en las filas 1-2. La fila de encabezados pasa a la fila 3 y los datos a partir de la 4.
+                $event->sheet->getDelegate()->insertNewRowBefore(1, 2);
+
+                $labels = ['Nombre del socio', 'Bloque', 'Nro. Puesto', 'Area', 'Giro de negocio'];
+                foreach ($labels as $i => $label) {
+                    $column = chr(65 + $i);
+                    $event->sheet->setCellValue($column . '1', $label);
+                    $event->sheet->setCellValue($column . '2', $this->encabezado[$i]);
+                }
+                $event->sheet->getStyle('A1:E1')->getFont()->setBold(true);
+
                 if ($this->count > 0) {
                     $lastRow = $event->sheet->getHighestRow() + 1;
-                    $event->sheet->setCellValue('A' . ($lastRow), 'TOTAL GENERAL:');
-                    $event->sheet->mergeCells("A{$lastRow}:E{$lastRow}");
-                    $event->sheet->getStyle("A{$lastRow}")->getAlignment()->setHorizontal('right');
+                    $event->sheet->setCellValue('A' . ($lastRow), 'Total (S/.)');
+                    $event->sheet->mergeCells("A{$lastRow}:E{$lastRow}");                    $event->sheet->getStyle("A{$lastRow}")->getAlignment()->setHorizontal('right');
                     $event->sheet->getStyle("A{$lastRow}:F{$lastRow}")->getFont()->setBold(true);
                     
-                    // Sumatoria solo de la columna F (Pago S/)
-                    $event->sheet->setCellValue('F' . ($lastRow), '=SUM(F2:F' . ($lastRow - 1) . ')');
+                    // Sumatoria solo de la columna F (Pago S/). Los datos inician en la fila 4.
+                    $event->sheet->setCellValue('F' . ($lastRow), '=SUM(F4:F' . ($lastRow - 1) . ')');
                 }
             }
         ];

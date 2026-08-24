@@ -6,24 +6,47 @@ use App\Models\DetallePagos;
 use App\Models\Deuda;
 use App\Models\SetupMes;
 use App\Models\DeudaCuota;
+use App\Models\Puesto;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
-class ReporteDeudasExport implements FromCollection, WithHeadings, WithStyles, WithEvents, WithColumnFormatting
+class ReporteDeudasExport implements FromCollection, WithHeadings, WithStyles, WithEvents, WithColumnFormatting, WithStrictNullComparison
 {
     protected $id_puesto;
+    protected $encabezado = ['-', '-', '-', '-', '-'];
     private $count = 0;
 
     public function __construct($id_puesto)
     {
         $this->id_puesto = $id_puesto;
+        $this->encabezado = $this->resolveEncabezado();
+    }
+
+    private function resolveEncabezado()
+    {
+        $default = ['-', '-', '-', '-', '-'];
+
+        $puesto = Puesto::with(['socio.persona', 'block', 'gironegocio'])->find($this->id_puesto);
+
+        if (!$puesto) {
+            return $default;
+        }
+
+        return [
+            $puesto->socio && $puesto->socio->persona ? $puesto->socio->persona->nombre_completo : '-',
+            $puesto->block ? $puesto->block->nombre : '-',
+            $puesto->numero_puesto ?? '-',
+            $puesto->area ?? '-',
+            $puesto->gironegocio ? $puesto->gironegocio->nombre : '-',
+        ];
     }
 
     public function collection()
@@ -50,11 +73,10 @@ class ReporteDeudasExport implements FromCollection, WithHeadings, WithStyles, W
                 $importe_por_pagar = $deuda->total_deuda - $importe_pagado;
 
                 return [
-                    'id_cuota' => $deuda->id_cuota,
                     'anio' => $anio,
                     'mes' => $mes,
+                    'fecha' => (new Carbon($deuda->fecha_registro))->format('Y-m-d'),
                     'servicio_descripcion' => $servicio_nombres,
-                    'total' => $deuda->total_deuda ?? 0,
                     'importe_pagado' => $importe_pagado ?? 0,
                     'importe_por_pagar' => $importe_por_pagar,
                 ];
@@ -67,11 +89,10 @@ class ReporteDeudasExport implements FromCollection, WithHeadings, WithStyles, W
     public function headings(): array
     {
         return [
-            'ID Cuota',
             'Año',
             'Mes',
-            'Desc. Servicios por Cuota',
-            'Total (S/.)',
+            'Fec. Pago',
+            'Servicios',
             'Imp. Pagado (S/.)',
             'Imp. Por pagar (S/.)',
         ];
@@ -81,39 +102,42 @@ class ReporteDeudasExport implements FromCollection, WithHeadings, WithStyles, W
     {
         return[
             'E' => NumberFormat::FORMAT_NUMBER_00,
-            'F' => NumberFormat::FORMAT_NUMBER_00,
-            'G' => NumberFormat::FORMAT_NUMBER_00
+            'F' => NumberFormat::FORMAT_NUMBER_00
         ];
     }
 
     public function styles(Worksheet $sheet)
     {
-        
         $sheet->getStyle(1)->getFont()->setBold(true);
 
-        
-        foreach (range('A', 'G') as $column) {
+        foreach (range('A', 'F') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
-
-        $sheet->mergeCells('A'.($this->count + 2).':D'.($this->count + 2));
-        $sheet->getStyle('A'.($this->count + 2))->getAlignment()->setHorizontal('center');
-        $sheet->getStyle('A'.($this->count + 2))->getFont()->setBold(true);
-        $sheet->getStyle('E'.($this->count + 2))->getFont()->setBold(true);
-        $sheet->getStyle('F'.($this->count + 2))->getFont()->setBold(true);
-        $sheet->getStyle('G'.($this->count + 2))->getFont()->setBold(true);
     }
 
     public function registerEvents(): array
     {
         return [
             AfterSheet::class => function(AfterSheet $event) {
-                $lastRow = $event->sheet->getHighestRow();
-                $event->sheet->getStyle(1)->getFont()->setBold(true);
-                $event->sheet->setCellValue('A'. ($lastRow), 'TOTAL:');
-                $event->sheet->setCellValue('E'. ($lastRow), '=SUM(E2:E'.($lastRow-1).')');
-                $event->sheet->setCellValue('F'. ($lastRow), '=SUM(F2:F'.($lastRow-1).')');
-                $event->sheet->setCellValue('G'. ($lastRow), '=SUM(G2:G'.($lastRow-1).')');
+                // Inserta el bloque de cabecera (Nombre del socio, Bloque, Nro. Puesto, Area, Giro)
+                // en las filas 1-2. La fila de encabezados pasa a la fila 3 y los datos a partir de la 4.
+                $event->sheet->getDelegate()->insertNewRowBefore(1, 2);
+
+                $labels = ['Nombre del socio', 'Bloque', 'Nro. Puesto', 'Area', 'Giro de negocio'];
+                foreach ($labels as $i => $label) {
+                    $column = chr(65 + $i);
+                    $event->sheet->setCellValue($column . '1', $label);
+                    $event->sheet->setCellValue($column . '2', $this->encabezado[$i]);
+                }
+                $event->sheet->getStyle('A1:E1')->getFont()->setBold(true);
+
+                if ($this->count > 0) {
+                    $lastRow = $event->sheet->getHighestRow() + 1;
+                    $event->sheet->setCellValue('A' . ($lastRow), 'TOTAL:');
+                    $event->sheet->setCellValue('E' . ($lastRow), '=SUM(E4:E' . ($lastRow - 1) . ')');
+                    $event->sheet->setCellValue('F' . ($lastRow), '=SUM(F4:F' . ($lastRow - 1) . ')');
+                    $event->sheet->getStyle("A{$lastRow}:F{$lastRow}")->getFont()->setBold(true);
+                }
             }
         ];
     }

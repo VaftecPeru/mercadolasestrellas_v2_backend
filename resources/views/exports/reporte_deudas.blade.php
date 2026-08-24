@@ -61,33 +61,30 @@
     <thead>
       <tr>
         <th>Año</th>
-        <!-- <th>Mes</th> -->
-        <th>Servicio</th>
-        <!-- <th>Total(S/.)</th> -->
-        <th>Imp. Pagado(S/.)</th>
-        <!-- <th>Imp. Pagado(S/.)</th> -->
-        <th>Imp. Por pagar(S/.)</th>
-        <!-- <th>Imp. Por pagar(S/.)</th> -->
+        <th>Mes</th>
+        <th>Fec. Pago</th>
+        <th>Servicios</th>
+        <th>Imp. Pagado (S/.)</th>
+        <th>Imp. Por pagar (S/.)</th>
       </tr>
     </thead>
     <tbody>
       @foreach($deudas as $deuda)
         <tr>
-          <td>{{ $deuda['anio'] }}</td>
-          <!-- <td>{{ $deuda['mes'] }}</td> -->
+          <td align="center">{{ $deuda['anio'] }}</td>
+          <td align="center">{{ $deuda['mes'] }}</td>
+          <td align="center">{{ $deuda['fecha'] }}</td>
           <td>{{ $deuda['servicio_descripcion'] }}</td>
-          <td class="right">{{ $deuda['total'] }}</td>
           <td class="right">{{ $deuda['importe_pagado'] }}</td>
-          <!-- <td class="right">{{ $deuda['importe_por_pagar'] }}</td> -->
+          <td class="right">{{ $deuda['importe_por_pagar'] }}</td>
         </tr>
       @endforeach
     </tbody>
     <tfoot>
       <tr>
-        <th colspan="2">Total(S/.)</th>
-        <th class="right">{{ $total }}</th>
-        <th class="right">{{ $total }}</th>
-        <!-- <th class="right">{{ $total }}</th> -->
+        <th colspan="4">Total (S/.)</th>
+        <th class="right">{{ $total_importe_pagado }}</th>
+        <th class="right">{{ $total_importe_por_pagar }}</th>
       </tr>
     </tfoot>
   </table>

@@ -45,6 +45,7 @@ class ReporteDeudasPDFExport {
                 return [
                     'anio' => $anio,
                     'mes' => $mes,
+                    'fecha' => (new Carbon($deuda->fecha_registro))->format('Y-m-d'),
                     'servicio_descripcion' => $servicio_nombres,
                     'total' => number_format($deuda->total_deuda, 2, '.', ''),
                     'importe_pagado' => number_format($importe_pagado, 2, '.', ''),

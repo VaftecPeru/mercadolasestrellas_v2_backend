@@ -107,6 +107,15 @@ Route::group(['prefix' => 'v1'], function () {
     Route::get('/reportes/resumen/puesto/exportar-pdf', [ReporteController::class, 'exportReporteResumenPorPuestoPDF']);
     Route::get('/reportes/dashboard', [ReporteController::class, 'dashboard']);
 
+    // Alias frontend
+    Route::get('/reportes/cuota-por-metros', [ReporteController::class, 'cuotaPorMetros']);
+    Route::get('/reportes/cuota-por-metros/exportar', [ReporteController::class, 'exportReporteCuotasMetrado']);
+    Route::get('/reportes/cuota-por-puestos', [ReporteController::class, 'cuotaPorPuestos']);
+    Route::get('/reportes/cuota-por-puestos/exportar', [ReporteController::class, 'exportReporteCuotasPuesto']);
+    Route::get('/reportes/resumen-por-puestos', [ReporteController::class, 'resumenPorPuestos']);
+    Route::get('/reportes/resumen-por-puestos/exportar', [ReporteController::class, 'exportReporteResumenPorPuesto']);
+    Route::get('/reporte-deudas/exportar', [ReporteController::class, 'exportReporteDeudas']);
+
     Route::post('/login', [LoginController::class, 'login']);
     Route::post('/logout', [LoginController::class, 'logout']);
     Route::get('/validaciones', [LoginController::class, 'validaciones']);

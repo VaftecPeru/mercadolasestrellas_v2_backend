@@ -39,10 +39,23 @@
 <body>
   <h2>MERCADO LAS ESTRELLAS - REPORTE DE PAGOS</h2>
   <table>
+    <thead>
+      <tr>
+        <th>Nombre del socio</th>
+        <th>Bloque</th>
+        <th>Nro. Puesto</th>
+        <th>Area</th>
+        <th>Giro de negocio</th>
+      </tr>
+    </thead>
     <tbody>
-      <td><strong>Nombre del socio</strong></td>
-      <td> {{ $nombre_socio }}</td>
-    </tbody>
+      <tr>
+        <td>{{ $nombre_socio }}</td>
+        <td>{{ $nombre_bloque }}</td>
+        <td>{{ $numero_puesto }}</td>
+        <td>{{ $area }}</td>
+        <td>{{ $giro_negocio }}</td>
+      </tr>
   </table>
   <table>
     <thead>
@@ -52,7 +65,7 @@
         <th>Fec. Pago</th>
         <th>Servicios</th>
         <th>Monto (S/.)</th>
-        <th>Pago (S/.)</th>
+        <th>Imp. Pagado (S/.)</th>
       </tr>
     </thead>
     <tbody>
@@ -65,7 +78,7 @@
             <td align="center">{{ $pago['fecha'] }}</td>
             <td>{{ $detalle['servicio_nombre'] }}</td>
             <td class="right">{{ number_format($detalle['importe'], 2) }}</td>
-            <td class="right" style="background-color: #fafafa; font-weight: bold;">
+            <td class="right" style="background-color: #fafafa;">
               {{ $key === $pagoCount - 1 ? 'S/ ' . number_format($pago['total'], 2) : '' }}
             </td>
           </tr>
@@ -74,7 +87,7 @@
     </tbody>
     <tfoot>
       <tr>
-        <th colspan="5" class="right">TOTAL GENERAL:</th>
+        <th colspan="5" class="right">Total (S/.)</th>
         <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total, 2) }}</th>
       </tr>
     </tfoot>
