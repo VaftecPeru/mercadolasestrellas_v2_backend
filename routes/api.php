@@ -115,6 +115,7 @@ Route::group(['prefix' => 'v1'], function () {
     Route::get('/reportes/cuota-por-puestos/exportar', [ReporteController::class, 'exportReporteCuotasPuesto']);
     Route::get('/reportes/resumen-por-puestos', [ReporteController::class, 'resumenPorPuestos']);
     Route::get('/reportes/resumen-por-puestos/exportar', [ReporteController::class, 'exportReporteResumenPorPuesto']);
+    Route::get('/reportes/resumen-por-puestos/exportar-pdf', [ReporteController::class, 'exportReporteResumenPorPuestoPDF']);
     Route::get('/reporte-deudas/exportar', [ReporteController::class, 'exportReporteDeudas']);
 
     Route::post('/login', [LoginController::class, 'login']);
