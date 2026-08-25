@@ -110,6 +110,7 @@ Route::group(['prefix' => 'v1'], function () {
     // Alias frontend
     Route::get('/reportes/cuota-por-metros', [ReporteController::class, 'cuotaPorMetros']);
     Route::get('/reportes/cuota-por-metros/exportar', [ReporteController::class, 'exportReporteCuotasMetrado']);
+    Route::get('/reportes/cuota-por-metros/exportar-pdf', [ReporteController::class, 'exportReporteCuotasMetradoPDF']);
     Route::get('/reportes/cuota-por-puestos', [ReporteController::class, 'cuotaPorPuestos']);
     Route::get('/reportes/cuota-por-puestos/exportar', [ReporteController::class, 'exportReporteCuotasPuesto']);
     Route::get('/reportes/resumen-por-puestos', [ReporteController::class, 'resumenPorPuestos']);
