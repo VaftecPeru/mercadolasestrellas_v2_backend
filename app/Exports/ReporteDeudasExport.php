@@ -4,7 +4,6 @@ namespace App\Exports;
 
 use App\Models\DetallePagos;
 use App\Models\Deuda;
-use App\Models\SetupMes;
 use App\Models\DeudaCuota;
 use App\Models\Puesto;
 use Carbon\Carbon;
@@ -54,13 +53,6 @@ class ReporteDeudasExport implements FromCollection, WithHeadings, WithStyles, W
         $deudas = Deuda::where('id_puesto', $this->id_puesto)
             ->get()
             ->map(function ($deuda) {
-                $anio = (new Carbon($deuda->fecha_registro))->format('Y');
-
-                $mes = '';
-                $mesCarbon = (new Carbon( $deuda->fecha_registro ))->format('m');
-                $mesCarbon = (int)$mesCarbon;
-                $mes = data_get(SetupMes::find($mesCarbon), 'nombre', '------');
-                
                 $deudaCuotas = DeudaCuota::select('c.nombre')
                     ->join('cuota_servicios as b','deuda_cuotas.id_cuota_servicio','b.id_cuota_servicio')
                     ->join('servicios as c','b.id_servicio','c.id_servicio')
@@ -73,10 +65,9 @@ class ReporteDeudasExport implements FromCollection, WithHeadings, WithStyles, W
                 $importe_por_pagar = $deuda->total_deuda - $importe_pagado;
 
                 return [
-                    'anio' => $anio,
-                    'mes' => $mes,
                     'fecha' => (new Carbon($deuda->fecha_registro))->format('Y-m-d'),
                     'servicio_descripcion' => $servicio_nombres,
+                    'total' => $deuda->total_deuda,
                     'importe_pagado' => $importe_pagado ?? 0,
                     'importe_por_pagar' => $importe_por_pagar,
                 ];
@@ -89,10 +80,9 @@ class ReporteDeudasExport implements FromCollection, WithHeadings, WithStyles, W
     public function headings(): array
     {
         return [
-            'Año',
-            'Mes',
             'Fec. Pago',
             'Servicios',
+            'Total (S/.)',
             'Imp. Pagado (S/.)',
             'Imp. Por pagar (S/.)',
         ];
@@ -101,8 +91,9 @@ class ReporteDeudasExport implements FromCollection, WithHeadings, WithStyles, W
     public function columnFormats(): array
     {
         return[
-            'E' => NumberFormat::FORMAT_NUMBER_00,
-            'F' => NumberFormat::FORMAT_NUMBER_00
+            'C' => NumberFormat::FORMAT_NUMBER_00,
+            'D' => NumberFormat::FORMAT_NUMBER_00,
+            'E' => NumberFormat::FORMAT_NUMBER_00
         ];
     }
 
@@ -110,7 +101,7 @@ class ReporteDeudasExport implements FromCollection, WithHeadings, WithStyles, W
     {
         $sheet->getStyle(1)->getFont()->setBold(true);
 
-        foreach (range('A', 'F') as $column) {
+        foreach (range('A', 'E') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
     }
@@ -133,10 +124,13 @@ class ReporteDeudasExport implements FromCollection, WithHeadings, WithStyles, W
 
                 if ($this->count > 0) {
                     $lastRow = $event->sheet->getHighestRow() + 1;
-                    $event->sheet->setCellValue('A' . ($lastRow), 'TOTAL:');
+                    $event->sheet->setCellValue('A' . ($lastRow), 'Total (S/.)');
+                    $event->sheet->mergeCells("A{$lastRow}:B{$lastRow}");
+                    $event->sheet->getStyle("A{$lastRow}")->getAlignment()->setHorizontal('right');
+                    $event->sheet->getStyle("A{$lastRow}:E{$lastRow}")->getFont()->setBold(true);
+                    $event->sheet->setCellValue('C' . ($lastRow), '=SUM(C4:C' . ($lastRow - 1) . ')');
+                    $event->sheet->setCellValue('D' . ($lastRow), '=SUM(D4:D' . ($lastRow - 1) . ')');
                     $event->sheet->setCellValue('E' . ($lastRow), '=SUM(E4:E' . ($lastRow - 1) . ')');
-                    $event->sheet->setCellValue('F' . ($lastRow), '=SUM(F4:F' . ($lastRow - 1) . ')');
-                    $event->sheet->getStyle("A{$lastRow}:F{$lastRow}")->getFont()->setBold(true);
                 }
             }
         ];

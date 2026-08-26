@@ -69,6 +69,10 @@ class ReportePagosPDFExport {
 
         $total = $query->sum('total_pago');
 
+        $total_monto = $pagos->sum(function ($pago) {
+            return $pago['detalles']->sum('importe');
+        });
+
         $pdf = app(PDF::class)->loadView('exports.reporte_pagos', [
             'nombre_socio' => $nombre_socio,
             'nombre_bloque' => $nombre_bloque,
@@ -77,6 +81,7 @@ class ReportePagosPDFExport {
             'giro_negocio' => $giro_negocio,
             'pagos' => $pagos, 
             'total' => $total, 
+            'total_monto' => $total_monto,
         ]);
 
         return $pdf->download('reporte_pagos.pdf');

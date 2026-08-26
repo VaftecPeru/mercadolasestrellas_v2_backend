@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Exportar Reporte de Deudas</title>
+  <title>Exportar Reporte Resumen</title>
   <style>
     *{
       font-family: Arial, Helvetica, sans-serif;
@@ -37,7 +37,7 @@
   </style>
 </head>
 <body>
-  <h2>MERCADO LAS ESTRELLAS - REPORTE DE DEUDAS</h2>
+  <h2>MERCADO LAS ESTRELLAS - REPORTE RESUMEN</h2>
   <table>
     <thead>
       <tr>
@@ -73,24 +73,24 @@
       @foreach($pagos as $pago)
         <tr>
           <td class="right">{{ $pago['numero_pago'] }}</td>
-          <td class="right">{{ $pago['importe_ingreso'] }}</td>
-          <td class="right">{{ $pago['importe_gastos_administrativo'] }}</td>
-          <td class="right">{{ $pago['importe_multas_inasistencia'] }}</td>
-          <td class="right">{{ $pago['importe_pagos_transferencia'] }}</td>
-          <td class="right">{{ $pago['importe_cuotas_extraordinarias'] }}</td>
-          <td class="right">{{ $pago['importe_total'] }}</td>
+          <td class="right">S/ {{ number_format($pago['importe_ingreso'], 2) }}</td>
+          <td class="right">S/ {{ number_format($pago['importe_gastos_administrativo'], 2) }}</td>
+          <td class="right">S/ {{ number_format($pago['importe_multas_inasistencia'], 2) }}</td>
+          <td class="right">S/ {{ number_format($pago['importe_pagos_transferencia'], 2) }}</td>
+          <td class="right">S/ {{ number_format($pago['importe_cuotas_extraordinarias'], 2) }}</td>
+          <td class="right">S/ {{ number_format($pago['importe_total'], 2) }}</td>
         </tr>
       @endforeach
     </tbody>
     <tfoot>
       <tr>
-        <th>Total(S/.)</th>
-        <th class="right">{{ $total_importe_ingreso }}</th>
-        <th class="right">{{ $total_importe_gastos_administrativo }}</th>
-        <th class="right">{{ $total_importe_multas_inasistencia }}</th>
-        <th class="right">{{ $total_importe_pagos_transferencia }}</th>
-        <th class="right">{{ $total_importe_cuotas_extraordinarias }}</th>
-        <th class="right">{{ $total_importe_total }}</th>
+        <th colspan="1" class="right">Total (S/.)</th>
+        <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_ingreso, 2) }}</th>
+        <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_gastos_administrativo, 2) }}</th>
+        <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_multas_inasistencia, 2) }}</th>
+        <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_pagos_transferencia, 2) }}</th>
+        <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_cuotas_extraordinarias, 2) }}</th>
+        <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_total, 2) }}</th>
       </tr>
     </tfoot>
   </table>

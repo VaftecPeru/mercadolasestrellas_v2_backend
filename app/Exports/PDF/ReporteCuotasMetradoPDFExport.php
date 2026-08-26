@@ -36,6 +36,7 @@ class ReporteCuotasMetradoPDFExport {
                     'area' => $deuda->puesto ? $deuda->puesto->area : '',
                     'total' => $deuda->total_deuda,
                     'importe_pagado' => $importe_pagado,
+                    'importe_por_pagar' => $deuda->total_deuda - $importe_pagado,
                     'fecha_registro' => $deuda->fecha_registro,
                 ];
 
@@ -44,6 +45,7 @@ class ReporteCuotasMetradoPDFExport {
         $deudasArray = json_decode(json_encode($deudas), true);
         $total = Util::sumaColArrayObjFormat($deudasArray, 'total');
         $total_importe_pagado = Util::sumaColArrayObjFormat($deudasArray, 'importe_pagado');
+        $total_importe_por_pagar = Util::sumaColArrayObjFormat($deudasArray, 'importe_por_pagar');
 
         $pdf = app(PDF::class)->loadView('exports.reporte_cuotas_metrado', [
             'fecha_emision' => $fecha_emision,
@@ -51,6 +53,7 @@ class ReporteCuotasMetradoPDFExport {
             'deudas' => $deudas,
             'total' => $total,
             'total_importe_pagado' => $total_importe_pagado,
+            'total_importe_por_pagar' => $total_importe_por_pagar,
         ]);
 
         return $pdf->download('reporte_cuotas_metrado.pdf');
