@@ -56,26 +56,26 @@
     <thead>
       <tr>
         <th>ID Cuota</th>
-        <th>Nombre Completo</th>
-        <th>Número de Puesto</th>
-        <th>Área</th>
-        <th>Total (S/.)</th>
+        <th>Fec. Registro</th>
+        <th>Nombre del socio</th>
+        <th>N° Puesto</th>
+        <th>Área (m2)</th>
+        <th>Total (S/)</th>
         <th>Imp. Pagado (S/.)</th>
-        <th>Imp. Por pagar (S/.)</th>
-        <th>Fecha de Registro</th>
+        <th>Imp. Por pagar (S/)</th>
       </tr>
     </thead>
     <tbody>
       @foreach($deudas as $deuda)
         <tr>
           <td>{{ $deuda['id_cuota'] }}</td>
+          <td>{{ $deuda['fecha_registro'] }}</td>
           <td>{{ $deuda['nombre_completo'] }}</td>
           <td>{{ $deuda['numero_puesto'] }}</td>
           <td class="right">{{ $deuda['area'] }}</td>
           <td class="right">S/ {{ number_format($deuda['total'], 2) }}</td>
           <td class="right">S/ {{ number_format($deuda['importe_pagado'], 2) }}</td>
           <td class="right">S/ {{ number_format($deuda['total'] - $deuda['importe_pagado'], 2) }}</td>
-          <td>{{ $deuda['fecha_registro'] }}</td>
         </tr>
       @endforeach
     </tbody>
