@@ -32,6 +32,8 @@
       text-align: center;
       margin-top: 20px;
     }
+
+    .right { text-align: right; }
   </style>
 </head>
 <body>
@@ -65,6 +67,14 @@
         </tr>
       @endforeach
     </tbody>
+    <tfoot>
+      <tr>
+        <th colspan="8" class="right">Total (S/.)</th>
+        <th class="right" style="background-color: #e3f2fd;">
+          S/ {{ number_format($total, 2) }}
+        </th>
+      </tr>
+    </tfoot>
   </table>
 </body>
 </html>
