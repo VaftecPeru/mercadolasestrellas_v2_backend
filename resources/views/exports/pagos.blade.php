@@ -69,7 +69,10 @@
     </tbody>
     <tfoot>
       <tr>
-        <th colspan="8" class="right">Total (S/.)</th>
+        <th colspan="7" class="right">Total (S/.)</th>
+        <th class="right" style="background-color: #e3f2fd;">
+          S/ {{ number_format($total_a_cuenta, 2) }}
+        </th>
         <th class="right" style="background-color: #e3f2fd;">
           S/ {{ number_format($total, 2) }}
         </th>

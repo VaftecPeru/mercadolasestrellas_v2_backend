@@ -49,10 +49,12 @@ class PagosPDFExport {
     });
 
     $total = $pagos->sum(fn($p) => (float) $p['monto_actual']);
+    $total_a_cuenta = $pagos->sum(fn($p) => (float) $p['a_cuenta']);
 
     $pdf = app(PDF::class)->loadView('exports.pagos', [
         'pagos' => $pagos,
         'total' => $total,
+        'total_a_cuenta' => $total_a_cuenta,
     ]);
     return $pdf->download('pagos.pdf');
 

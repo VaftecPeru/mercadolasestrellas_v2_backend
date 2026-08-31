@@ -106,13 +106,14 @@ class PagosExport implements FromCollection, WithHeadings, WithStyles, WithEvent
                 if ($this->count > 0) {
                     $lastRow = $event->sheet->getHighestRow() + 1;
                     $event->sheet->setCellValue('A' . $lastRow, 'Total (S/.)');
-                    $event->sheet->mergeCells("A{$lastRow}:H{$lastRow}");
+                    $event->sheet->mergeCells("A{$lastRow}:G{$lastRow}");
                     $event->sheet->getStyle("A{$lastRow}")->getAlignment()->setHorizontal('right');
                     $event->sheet->getStyle("A{$lastRow}:I{$lastRow}")->getFont()->setBold(true);
-                    $event->sheet->getStyle("I{$lastRow}")->getFill()
+                    $event->sheet->getStyle("H{$lastRow}:I{$lastRow}")->getFill()
                         ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
                         ->getStartColor()->setRGB('e3f2fd');
-                    // SUM de la columna I (Monto Actual), datos desde fila 2
+                    // SUM de las columnas H (A cuenta) e I (Monto Actual), datos desde fila 2
+                    $event->sheet->setCellValue('H' . $lastRow, '=SUM(H2:H' . ($lastRow - 1) . ')');
                     $event->sheet->setCellValue('I' . $lastRow, '=SUM(I2:I' . ($lastRow - 1) . ')');
                 }
             }
