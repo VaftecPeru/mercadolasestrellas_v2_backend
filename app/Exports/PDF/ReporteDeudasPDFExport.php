@@ -4,41 +4,52 @@ namespace App\Exports\PDF;
 
 use App\Models\DetallePagos;
 use App\Models\Deuda;
+use App\Models\DeudaCuota;
 use App\Models\Puesto;
 use App\Models\SetupMes;
-use App\Models\DeudaCuota;
+use App\Support\FiltroTexto;
 use Barryvdh\DomPDF\PDF;
 use Carbon\Carbon;
 
-class ReporteDeudasPDFExport {
+class ReporteDeudasPDFExport
+{
+    public function generatePDF($id_puesto, $nombre_socio = null)
+    {
 
-    public function generatePDF($id_puesto) {
+        $puesto = $id_puesto ? Puesto::find($id_puesto) : null;
+        $nombre_socio_puesto = $puesto?->socio?->persona?->nombre_completo ?? '-';
+        $nombre_bloque = $puesto?->block?->nombre ?? '-';
+        $numero_puesto = $puesto?->numero_puesto ?? '-';
+        $area = $puesto?->area ?? '-';
+        $giro_negocio = $puesto?->gironegocio?->nombre ?? '-';
 
-        $puesto = Puesto::find($id_puesto);
-        $nombre_socio = $puesto->socio->persona->nombre_completo;
-        $nombre_bloque = $puesto->block ? $puesto->block->nombre : '-';
-        $numero_puesto = $puesto->numero_puesto;
-        $area = $puesto->area;
-        $giro_negocio = $puesto->gironegocio ? $puesto->gironegocio->nombre : '-';
-
-        $deudas = Deuda::where('id_puesto', $id_puesto)
+        $deudas = Deuda::query()
+            ->when($id_puesto, function ($query) use ($id_puesto) {
+                $query->where('id_puesto', $id_puesto);
+            })
+            ->when($nombre_socio, function ($query) use ($nombre_socio) {
+                $texto = FiltroTexto::normalizarNombre($nombre_socio);
+                $query->whereHas('socio.persona', function ($q) use ($texto) {
+                    $q->whereRaw('upper(nombre_completo) LIKE upper(?)', ['%'.$texto.'%']);
+                });
+            })
             ->get()
             ->map(function ($deuda) {
                 $anio = (new Carbon($deuda->fecha_registro))->format('Y');
 
                 $mes = '';
-                $mesCarbon = (new Carbon( $deuda->fecha_registro ))->format('m');
-                $mesCarbon = (int)$mesCarbon;
+                $mesCarbon = (new Carbon($deuda->fecha_registro))->format('m');
+                $mesCarbon = (int) $mesCarbon;
                 $mes = (SetupMes::find($mesCarbon))->nombre;
 
                 $deudaCuotas = DeudaCuota::select('c.nombre')
-                    ->join('cuota_servicios as b','deuda_cuotas.id_cuota_servicio','b.id_cuota_servicio')
-                    ->join('servicios as c','b.id_servicio','c.id_servicio')
-                    ->where('deuda_cuotas.id_deuda',$deuda->id_deuda)
+                    ->join('cuota_servicios as b', 'deuda_cuotas.id_cuota_servicio', 'b.id_cuota_servicio')
+                    ->join('servicios as c', 'b.id_servicio', 'c.id_servicio')
+                    ->where('deuda_cuotas.id_deuda', $deuda->id_deuda)
                     ->groupBy('c.nombre')->get();
                 $servicio_nombres = implode(', ', $deudaCuotas->pluck('nombre')->toArray());
 
-                $importeSuma = DetallePagos::where('id_deuda',$deuda->id_deuda)->sum('importe');
+                $importeSuma = DetallePagos::where('id_deuda', $deuda->id_deuda)->sum('importe');
                 $importe_pagado = $importeSuma ?? 0;
                 $importe_por_pagar = $deuda->total_deuda - $importe_pagado;
 
@@ -52,6 +63,10 @@ class ReporteDeudasPDFExport {
                     'importe_por_pagar' => number_format($importe_por_pagar, 2, '.', ''),
                 ];
 
+            })
+            // Solo deudas pendientes: se excluyen las totalmente canceladas
+            ->filter(function ($deuda) {
+                return (float) $deuda['importe_por_pagar'] > 0;
             });
 
         $deudasArray = json_decode(json_encode($deudas), true);
@@ -63,7 +78,7 @@ class ReporteDeudasPDFExport {
         $total_importe_por_pagar = number_format($importe_por_pagar, 2, '.', '');
 
         $pdf = app(PDF::class)->loadView('exports.reporte_deudas', [
-            'nombre_socio' => $nombre_socio,
+            'nombre_socio' => $nombre_socio_puesto,
             'nombre_bloque' => $nombre_bloque,
             'numero_puesto' => $numero_puesto,
             'area' => $area,
@@ -77,5 +92,4 @@ class ReporteDeudasPDFExport {
         return $pdf->download('reporte_deudas.pdf');
 
     }
-
 }

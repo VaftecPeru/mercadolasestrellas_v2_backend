@@ -5,7 +5,6 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class ReportePagoResource extends JsonResource
 {
@@ -31,7 +30,7 @@ class ReportePagoResource extends JsonResource
                 ->where('detalle_pagos.id_pago', $this->id_pago);
 
             // Filtramos por puesto si se solicita un reporte de puesto específico
-            if ($idPuestoRequest && $idPuestoRequest != "") {
+            if ($idPuestoRequest && $idPuestoRequest != '') {
                 $queryDetalles->where('detalle_pagos.id_puesto', $idPuestoRequest);
             }
 
@@ -41,10 +40,11 @@ class ReportePagoResource extends JsonResource
                 'id_pago' => $this->id_pago,
                 'fecha' => $this->fecha_registro,
                 'total' => number_format($this->total_pago, 2, '.', ''),
+                'serie_numero' => $this->serie.'-'.$this->numero_pago,
                 'detalle_pagos' => $detalles->map(function ($d) {
                     return [
                         'importe' => number_format($d->importe, 2, '.', ''),
-                        'descripcion' => $d->descripcion ?? 'Servicio/Aporte'
+                        'descripcion' => $d->descripcion ?? 'Servicio/Aporte',
                     ];
                 }),
             ];
@@ -54,6 +54,7 @@ class ReportePagoResource extends JsonResource
                 'id_pago' => $this->id_pago ?? '?',
                 'fecha' => $this->fecha_registro ?? '',
                 'total' => $this->total_pago ?? 0,
+                'serie_numero' => isset($this->serie, $this->numero_pago) ? $this->serie.'-'.$this->numero_pago : '',
                 'detalle_pagos' => [],
             ];
         }
