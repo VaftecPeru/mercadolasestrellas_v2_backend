@@ -24,9 +24,13 @@ class ReportePagosExport implements FromCollection, WithColumnFormatting, WithEv
 
     private $count = 0;
 
+    // true = columnas de la pestaña "Pagos Realizados": Fec. Pago | Comprobante | Concepto | Monto
+    private $modoDetalle = false;
+
     public function __construct($filtro_id)
     {
         $this->filtro_id = $filtro_id;
+        $this->modoDetalle = request()->query('modo') === 'detalle';
         $this->encabezado = $this->resolveEncabezado();
     }
 
@@ -97,12 +101,21 @@ class ReportePagosExport implements FromCollection, WithColumnFormatting, WithEv
             $countDetalles = count($detalles);
 
             foreach ($detalles as $index => $detalle) {
-                $rows[] = [
-                    'fecha' => $fechaFmt,
-                    'servicio' => $detalle->servicio->nombre ?? 'Servicio',
-                    'monto' => $detalle->importe,
-                    'total' => ($index === $countDetalles - 1) ? $pago->total_pago : null,
-                ];
+                if ($this->modoDetalle) {
+                    $rows[] = [
+                        'fecha' => $index === 0 ? $fechaFmt : '',
+                        'comprobante' => $index === 0 ? $pago->serie.'-'.$pago->numero_pago : '',
+                        'concepto' => $detalle->servicio->nombre ?? 'Servicio',
+                        'monto' => ($index === $countDetalles - 1) ? $pago->total_pago : $detalle->importe,
+                    ];
+                } else {
+                    $rows[] = [
+                        'fecha' => $fechaFmt,
+                        'servicio' => $detalle->servicio->nombre ?? 'Servicio',
+                        'monto' => $detalle->importe,
+                        'total' => ($index === $countDetalles - 1) ? $pago->total_pago : null,
+                    ];
+                }
             }
         }
 
@@ -113,6 +126,15 @@ class ReportePagosExport implements FromCollection, WithColumnFormatting, WithEv
 
     public function headings(): array
     {
+        if ($this->modoDetalle) {
+            return [
+                'Fec. Pago',
+                'Comprobante',
+                'Concepto',
+                'Monto (S/.)',
+            ];
+        }
+
         return [
             'Fec. Pago',
             'Servicios',
@@ -123,6 +145,12 @@ class ReportePagosExport implements FromCollection, WithColumnFormatting, WithEv
 
     public function columnFormats(): array
     {
+        if ($this->modoDetalle) {
+            return [
+                'D' => NumberFormat::FORMAT_NUMBER_00,
+            ];
+        }
+
         return [
             'C' => NumberFormat::FORMAT_NUMBER_00,
             'D' => NumberFormat::FORMAT_NUMBER_00,
@@ -158,11 +186,17 @@ class ReportePagosExport implements FromCollection, WithColumnFormatting, WithEv
                 if ($this->count > 0) {
                     $lastRow = $event->sheet->getHighestRow() + 1;
                     $event->sheet->setCellValue('A'.($lastRow), 'Total (S/.)');
-                    $event->sheet->mergeCells("A{$lastRow}:B{$lastRow}");
                     $event->sheet->getStyle("A{$lastRow}")->getAlignment()->setHorizontal('right');
                     $event->sheet->getStyle("A{$lastRow}:D{$lastRow}")->getFont()->setBold(true);
-                    $event->sheet->setCellValue('C'.($lastRow), '=SUM(C4:C'.($lastRow - 1).')');
-                    $event->sheet->setCellValue('D'.($lastRow), '=SUM(D4:D'.($lastRow - 1).')');
+
+                    if ($this->modoDetalle) {
+                        $event->sheet->mergeCells("A{$lastRow}:C{$lastRow}");
+                        $event->sheet->setCellValue('D'.($lastRow), '=SUM(D4:D'.($lastRow - 1).')');
+                    } else {
+                        $event->sheet->mergeCells("A{$lastRow}:B{$lastRow}");
+                        $event->sheet->setCellValue('C'.($lastRow), '=SUM(C4:C'.($lastRow - 1).')');
+                        $event->sheet->setCellValue('D'.($lastRow), '=SUM(D4:D'.($lastRow - 1).')');
+                    }
                 }
             },
         ];

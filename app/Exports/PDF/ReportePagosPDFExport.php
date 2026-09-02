@@ -83,6 +83,20 @@ class ReportePagosPDFExport
             return $pago['detalles']->sum('importe');
         });
 
+        // Total de la columna "Monto" tal como se muestra (total del pago en la última fila)
+        $total_monto_detalle = $pagos->sum(function ($pago) {
+            $detalles = $pago['detalles'];
+            $last = count($detalles) - 1;
+            $suma = 0;
+            foreach ($detalles as $i => $detalle) {
+                $suma += $i === $last ? (float) $pago['total'] : (float) $detalle['importe'];
+            }
+
+            return $suma;
+        });
+
+        $detalleMode = request()->query('modo') === 'detalle';
+
         $pdf = app(PDF::class)->loadView('exports.reporte_pagos', [
             'nombre_socio' => $nombre_socio,
             'nombre_bloque' => $nombre_bloque,
@@ -92,6 +106,8 @@ class ReportePagosPDFExport
             'pagos' => $pagos,
             'total' => $total,
             'total_monto' => $total_monto,
+            'total_monto_detalle' => $total_monto_detalle,
+            'modo_detalle' => $detalleMode,
         ]);
 
         return $pdf->download('reporte_pagos.pdf');

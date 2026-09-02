@@ -41,6 +41,7 @@ class DeudaController extends Controller
                 'deuda_cuotas.id_deuda_cuota',
                 'deuda_cuotas.id_deuda',
                 'servicios.nombre as nombre_servicio',
+                DB::raw('max(date(deudas.fecha_registro)) as fecha'),
                 DB::raw('max(year(deudas.fecha_registro)) as anio'),
                 DB::raw('max((select nombre from setup_mes where setup_mes.id_mes = MONTH(deudas.fecha_registro))) AS mes'),
                 DB::raw('max(deuda_cuotas.monto) as total'),
