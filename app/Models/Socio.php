@@ -10,15 +10,18 @@ class Socio extends Model
     use HasFactory;
 
     protected $table = 'socios';
+
     protected $primaryKey = 'id_socio';
+
     public $timestamps = false;
+
     public $incrementing = false;
 
     protected $fillable = [
         'id_socio',
         'id_usuario',
         'fecha_registro',
-        'estado'
+        'estado',
     ];
 
     // Eager load persona por defecto para evitar N+1 queries
@@ -28,7 +31,7 @@ class Socio extends Model
     // COMENTADO: Interfiere con paginación
     // protected $appends = [
     //     'nombres',
-    //     'apellido_paterno', 
+    //     'apellido_paterno',
     //     'apellido_materno',
     //     'dni',
     //     'correo',
@@ -66,6 +69,12 @@ class Socio extends Model
     public function Persona()
     {
         return $this->belongsTo(Persona::class, 'id_socio', 'id_persona');
+    }
+
+    // Orden alfabético por nombre completo de la persona (personas.id_persona = socios.id_socio)
+    public function scopeOrderByNombreCompleto($query)
+    {
+        return $query->orderByRaw('upper((select nombre_completo from personas where personas.id_persona = socios.id_socio)) asc');
     }
 
     // Accessors: Obtener datos desde Persona
@@ -111,7 +120,7 @@ class Socio extends Model
 
     public function getNombreCompletoAttribute()
     {
-        return $this->persona->nombre_completo ?? 
-               ($this->nombres . ' ' . $this->apellido_paterno . ' ' . $this->apellido_materno);
+        return $this->persona->nombre_completo ??
+               ($this->nombres.' '.$this->apellido_paterno.' '.$this->apellido_materno);
     }
 }

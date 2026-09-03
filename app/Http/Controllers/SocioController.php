@@ -4,16 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Exports\PDF\SociosPDFExport;
 use App\Exports\SociosExport;
-use App\Models\Socio;
 use App\Http\Resources\SocioCollection;
-use App\Models\Puesto;
-use App\Models\Usuario;
 use App\Models\Persona;
+use App\Models\Puesto;
+use App\Models\Socio;
+use App\Models\Usuario;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
-use Carbon\Carbon;
 
 class SocioController extends Controller
 {
@@ -31,30 +30,30 @@ class SocioController extends Controller
             $texto = strtr(utf8_decode($request->nombre_socio), utf8_decode('àáâãäçèéêëìíîïñòóôõöùúûüýÿÀÁÂÃÄÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ'), 'aaaaaceeeeiiiinooooouuuuyyAAAAACEEEEIIIINOOOOOUUUUY');
             $texto = strtr(utf8_decode($texto), utf8_decode('àáâãäçèéêëìíîïññòóôõöùúûüýÿÀÁÂÃÄÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ'), 'aaaaaceeeeiiiin?ooooouuuuyyAAAAACEEEEIIIINOOOOOUUUUY');
             $texto = str_replace(' ', '%', $texto);
-            $listado->whereHas('persona', function($query) use ($texto) {
-                $query->whereRaw("upper(nombre_completo) LIKE upper( ? )", ['%'.$texto.'%']);
+            $listado->whereHas('persona', function ($query) use ($texto) {
+                $query->whereRaw('upper(nombre_completo) LIKE upper( ? )', ['%'.$texto.'%']);
             });
         }
 
         if (isset($request->numero_puesto)) {
-            $listado->whereHas('puestos', function($query) use ($request) {
-                $query->whereRaw("upper(numero_puesto) LIKE upper( ? )", ['%'.$request->numero_puesto.'%']);
+            $listado->whereHas('puestos', function ($query) use ($request) {
+                $query->whereRaw('upper(numero_puesto) LIKE upper( ? )', ['%'.$request->numero_puesto.'%']);
             });
         }
 
-        $listado->orderBy('socios.id_socio', 'asc');
+        $listado->orderByNombreCompleto();
 
         return new SocioCollection($listado->paginate($per_page));
     }
 
     public function seleccionarSocio()
     {
-        $socios = Socio::join('personas as c','socios.id_socio','c.id_persona')
+        $socios = Socio::join('personas as c', 'socios.id_socio', 'c.id_persona')
             ->where('socios.estado', '1')
             ->select('socios.id_socio', 'c.nombre_completo', 'c.dni', 'c.telefono', 'c.correo')
             ->get();
-        
-        return response()->json(["data" => $socios]);
+
+        return response()->json(['data' => $socios]);
     }
 
     public function listarPuestos(Request $request)
@@ -66,13 +65,13 @@ class SocioController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(["error" => $validator->errors()->first()], 400);
+            return response()->json(['error' => $validator->errors()->first()], 400);
         }
 
         $puestos = Puesto::where('id_socio', $request->input('id_socio'))
             ->get(['id_puesto', 'numero_puesto']);
 
-        return response()->json(["data"=>$puestos]);
+        return response()->json(['data' => $puestos]);
     }
 
     public function store(Request $request)
@@ -100,21 +99,21 @@ class SocioController extends Controller
             'fecha_registro.required' => 'El campo fecha de registro es obligatorio',
             'sexo.required' => 'El campo sexo es obligatorio',
             'telefono.required' => 'El campo telefono es obligatorio',
-            'telefono.digits' => 'El campo telefono debe tener 9 digitos'
+            'telefono.digits' => 'El campo telefono debe tener 9 digitos',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(["error" => $validator->errors()->first()], 400);
+            return response()->json(['error' => $validator->errors()->first()], 400);
         }
 
         $persona = Persona::where('dni', $request->input('dni'))->first();
         if ($persona) {
-            return response()->json(["error" => "El dni ya esta registrado. ".$persona->nombre_completo], 400);
+            return response()->json(['error' => 'El dni ya esta registrado. '.$persona->nombre_completo], 400);
         }
 
         $nombre_completo = $request->input('nombre').' '.$request->input('apellido_paterno').' '.$request->input('apellido_materno');
         // Registro de Persona
-        $persona = new Persona();
+        $persona = new Persona;
         // $persona->id_socio = $usuario->id_usuario;
         // $persona->id_usuario = $usuario->id_usuario;
         $persona->nombre = $request->input('nombre');
@@ -132,7 +131,7 @@ class SocioController extends Controller
         $persona->save();
 
         // Registro de socio (solo ID, fecha y estado - los datos personales vienen de Persona)
-        $socio = new Socio();
+        $socio = new Socio;
         $socio->id_socio = $persona->id_persona;
         $socio->fecha_registro = $request->input('fecha_registro');
         $socio->estado = $request->input('estado');
@@ -140,7 +139,7 @@ class SocioController extends Controller
 
         // Se asigna el puesto al socio
         if ($request->input('id_puesto') == null) {
-            return response()->json(["data"=>$socio, "message"=>"Socio registrado correctamente"]);
+            return response()->json(['data' => $socio, 'message' => 'Socio registrado correctamente']);
         }
 
         $puesto = Puesto::where('id_puesto', $request->input('id_puesto'))->first();
@@ -148,7 +147,7 @@ class SocioController extends Controller
         $puesto->estado = 2;
         $puesto->update();
 
-        return response()->json(["data"=>$socio, "message"=>"Socio registrado correctamente"]);
+        return response()->json(['data' => $socio, 'message' => 'Socio registrado correctamente']);
     }
 
     public function update(Request $request, $id_socio)
@@ -180,13 +179,13 @@ class SocioController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(["error" => $validator->errors()->first()], 400);
+            return response()->json(['error' => $validator->errors()->first()], 400);
         }
 
         $persona = Persona::where('dni', $request->input('dni'))
             ->where('id_persona', '!=', $id_socio)->first();
         if ($persona) {
-            return response()->json(["error" => "El dni ya esta registrado. ".$persona->nombre_completo], 400);
+            return response()->json(['error' => 'El dni ya esta registrado. '.$persona->nombre_completo], 400);
         }
 
         $nombre_completo = $request->input('nombre').' '.$request->input('apellido_paterno').' '.$request->input('apellido_materno');
@@ -220,7 +219,7 @@ class SocioController extends Controller
             $usuario->update();
         }
 
-        return response()->json(["data"=>$socio, "message"=>"Los datos del socio fueron actualizados correctamente"]);
+        return response()->json(['data' => $socio, 'message' => 'Los datos del socio fueron actualizados correctamente']);
     }
 
     public function destroy($id_socio)
@@ -229,7 +228,7 @@ class SocioController extends Controller
         $socio = Socio::find($id_socio);
 
         // Verificamos si el socio existe
-        if(!$socio){
+        if (! $socio) {
             return response()->json(['error' => 'El socio no existe.'], 400);
         }
 
@@ -248,17 +247,18 @@ class SocioController extends Controller
             $usuario->update();
         }
 
-        return response()->json(["message"=>"El socio fue eliminado correctamente"]);
+        return response()->json(['message' => 'El socio fue eliminado correctamente']);
     }
 
     public function export()
     {
-        return Excel::download(new SociosExport(), 'socios.xlsx');
+        return Excel::download(new SociosExport, 'socios.xlsx');
     }
 
     public function exportPDF()
     {
-        $export = new SociosPDFExport();
+        $export = new SociosPDFExport;
+
         return $export->generatePDF();
     }
 }
