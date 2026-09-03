@@ -19,6 +19,7 @@ use App\Http\Resources\ReportePagoCollection;
 use App\Models\DetallePagos;
 use App\Models\Deuda;
 use App\Models\Pago;
+use App\Support\Comprobante;
 use App\Support\FiltroTexto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -163,7 +164,16 @@ class ReporteController extends Controller
             ->where('detalle_pagos.id_puesto', $request->id_puesto)
             ->groupBy('b.total_pago', 'b.serie', 'b.numero_pago', 'b.id_pago'); // Agregado id_pago para estabilidad
 
-        return $paginate->paginate($per_page);
+        $paginado = $paginate->paginate($per_page);
+
+        // Unifica el comprobante al formato estándar (0000-xxxxxxxx)
+        $paginado->getCollection()->transform(function ($item) {
+            $item->serie_numero = Comprobante::formatear($item->serie, $item->numero_pago);
+
+            return $item;
+        });
+
+        return $paginado;
     }
 
     public function exportReporteResumenPorPuesto(Request $request)

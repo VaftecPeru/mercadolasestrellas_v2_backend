@@ -5,6 +5,7 @@ namespace App\Exports\PDF;
 use App\Models\Pago;
 use App\Models\Puesto;
 use App\Models\Socio;
+use App\Support\Comprobante;
 use App\Support\FiltroTexto;
 use Barryvdh\DomPDF\PDF;
 
@@ -61,7 +62,7 @@ class ReportePagosPDFExport
                     'anio' => $fecha->year,
                     'mes' => $meses[$fecha->month],
                     'numero' => $pago->numero_pago,
-                    'serie_numero' => $pago->serie.'-'.$pago->numero_pago,
+                    'serie_numero' => Comprobante::formatear($pago->serie, $pago->numero_pago),
                     'fecha' => $fecha->format('Y-m-d'),
                     'aporte' => $pago->total_pago,
                     'total' => $pago->total_pago,

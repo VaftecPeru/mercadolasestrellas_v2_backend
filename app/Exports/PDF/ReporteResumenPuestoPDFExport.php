@@ -4,12 +4,14 @@ namespace App\Exports\PDF;
 
 use App\Models\DetallePagos;
 use App\Models\Puesto;
+use App\Support\Comprobante;
 use App\Util\Util;
 use Barryvdh\DomPDF\PDF;
 
-class ReporteResumenPuestoPDFExport {
-
-    public function generatePDF($id_puesto) {
+class ReporteResumenPuestoPDFExport
+{
+    public function generatePDF($id_puesto)
+    {
 
         $puesto = Puesto::find($id_puesto);
         $nombre_socio = $puesto->socio->persona->nombre_completo;
@@ -23,7 +25,7 @@ class ReporteResumenPuestoPDFExport {
             ->get()
             ->map(function ($detallePagos) {
                 return [
-                    'numero_pago' => $detallePagos->pago ? $detallePagos->pago->serie.'-'.$detallePagos->pago->numero_pago : '-',
+                    'numero_pago' => $detallePagos->pago ? Comprobante::formatear($detallePagos->pago->serie ?? '', $detallePagos->pago->numero_pago ?? '') : '-',
                     'importe_ingreso' => $detallePagos->importe,
                     'importe_gastos_administrativo' => 0,
                     'importe_multas_inasistencia' => 0,
@@ -59,5 +61,4 @@ class ReporteResumenPuestoPDFExport {
         return $pdf->download('reporte_resumen_puesto.pdf');
 
     }
-
 }

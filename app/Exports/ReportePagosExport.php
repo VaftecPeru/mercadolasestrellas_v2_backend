@@ -5,6 +5,7 @@ namespace App\Exports;
 use App\Models\Pago;
 use App\Models\Puesto;
 use App\Models\Socio;
+use App\Support\Comprobante;
 use App\Support\FiltroTexto;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
@@ -104,7 +105,7 @@ class ReportePagosExport implements FromCollection, WithColumnFormatting, WithEv
                 if ($this->modoDetalle) {
                     $rows[] = [
                         'fecha' => $index === 0 ? $fechaFmt : '',
-                        'comprobante' => $index === 0 ? $pago->serie.'-'.$pago->numero_pago : '',
+                        'comprobante' => $index === 0 ? Comprobante::formatear($pago->serie, $pago->numero_pago) : '',
                         'concepto' => $detalle->servicio->nombre ?? 'Servicio',
                         'monto' => ($index === $countDetalles - 1) ? $pago->total_pago : $detalle->importe,
                     ];
