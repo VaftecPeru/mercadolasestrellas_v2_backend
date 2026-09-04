@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Texto;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -120,7 +121,12 @@ class Socio extends Model
 
     public function getNombreCompletoAttribute()
     {
-        return $this->persona->nombre_completo ??
-               ($this->nombres.' '.$this->apellido_paterno.' '.$this->apellido_materno);
+        $nombre = $this->persona && $this->persona->nombre_completo ? $this->persona->nombre_completo : '';
+
+        if ($nombre !== '') {
+            return $nombre;
+        }
+
+        return Texto::capitalizarNombre(trim(($this->nombres ?? '').' '.($this->apellido_paterno ?? '').' '.($this->apellido_materno ?? '')));
     }
 }

@@ -9,7 +9,7 @@ use App\Models\Persona;
 use App\Models\Puesto;
 use App\Models\Socio;
 use App\Models\Usuario;
-use Carbon\Carbon;
+use App\Support\Texto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
@@ -51,7 +51,12 @@ class SocioController extends Controller
         $socios = Socio::join('personas as c', 'socios.id_socio', 'c.id_persona')
             ->where('socios.estado', '1')
             ->select('socios.id_socio', 'c.nombre_completo', 'c.dni', 'c.telefono', 'c.correo')
-            ->get();
+            ->get()
+            ->map(function ($socio) {
+                $socio->nombre_completo = Texto::capitalizarNombre($socio->nombre_completo);
+
+                return $socio;
+            });
 
         return response()->json(['data' => $socios]);
     }
