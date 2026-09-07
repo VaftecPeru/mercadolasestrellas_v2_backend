@@ -23,12 +23,14 @@ class SociosExport implements FromCollection, WithHeadings, WithStyles
             // Los datos personales viven en la tabla `personas` (relación 1:1 con el mismo ID)
             $persona = $socio->persona;
 
+            $fechaRegistro = $socio->fecha_registro ?? ($persona->fecha_registro ?? null);
+
             $socioData = [
                 'nombre' => trim($persona->nombre_completo ?? ($persona->nombre ?? '').' '.($persona->apellido_paterno ?? '').' '.($persona->apellido_materno ?? '')) ?: '------',
                 'dni' => $persona->dni ?? '------',
                 'telefono' => $persona->telefono ?? '------',
                 'correo' => $persona->correo ?? '------',
-                'fecha_registro' => $socio->fecha_registro ?? ($persona->fecha_registro ?? '------'),
+                'fecha_registro' => $fechaRegistro ? \Carbon\Carbon::parse($fechaRegistro)->format('Y-m-d') : '------',
             ];
 
             $rowStart = $this->rowCount + 1;
@@ -60,15 +62,15 @@ class SociosExport implements FromCollection, WithHeadings, WithStyles
     public function headings(): array
     {
         return [
-            'Nombre Completo',
+            'Nombre del socio',
             'DNI',
-            'Telefono',
+            'Teléfono',
             'Correo',
             'Block',
             'Puesto',
-            'Giro Negocio',
+            'Giro',
             'Inquilino',
-            'Fecha registro',
+            'Fecha Registro',
         ];
     }
 

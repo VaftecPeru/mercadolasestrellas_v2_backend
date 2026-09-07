@@ -33,13 +33,15 @@ class SociosPDFExport
                     ]);
                 }
 
+                $fechaRegistro = $socio->fecha_registro ?? ($persona->fecha_registro ?? null);
+
                 return [
                     'nombre' => trim($persona->nombre_completo ?? ($persona->nombre ?? '').' '.($persona->apellido_paterno ?? '').' '.($persona->apellido_materno ?? '')) ?: '------',
                     'dni' => $persona->dni ?? '------',
                     'telefono' => $persona->telefono ?? '------',
                     'correo' => $persona->correo ?? '------',
                     'puestos' => $puestos,
-                    'fecha_registro' => $socio->fecha_registro ?? ($persona->fecha_registro ?? '------'),
+                    'fecha_registro' => $fechaRegistro ? \Carbon\Carbon::parse($fechaRegistro)->format('Y-m-d') : '------',
                 ];
             });
 

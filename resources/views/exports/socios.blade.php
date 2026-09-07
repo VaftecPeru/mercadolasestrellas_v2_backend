@@ -29,6 +29,15 @@
       text-align: center;
     }
 
+    thead {
+      display: table-header-group;
+    }
+
+    /* Evita que "Nombre del socio" se parta en dos líneas al repetir la cabecera en cada página */
+    th:first-child {
+      white-space: nowrap;
+    }
+
     h2 {
       text-align: center;
       margin-top: 20px;
@@ -41,13 +50,13 @@
   <table>
     <thead>
       <tr>
-        <th>Nombre Completo</th>
+        <th>Nombre del socio</th>
         <th>DNI</th>
         <th>Teléfono</th>
         <th>Correo</th>
         <th>Block</th>
-        <th>Giro</th>
         <th>Puesto</th>
+        <th>Giro</th>
         <th>Inquilino</th>
         <th>Fecha Registro</th>
       </tr>
@@ -60,16 +69,16 @@
         <td rowspan="{{ count($socio['puestos']) }}">{{ $socio['telefono'] }}</td>
         <td rowspan="{{ count($socio['puestos']) }}">{{ $socio['correo'] }}</td>
         <td>{{ $socio['puestos'][0]['block'] }}</td>
-        <td>{{ $socio['puestos'][0]['giro'] }}</td>
         <td>{{ $socio['puestos'][0]['numero'] }}</td>
+        <td>{{ $socio['puestos'][0]['giro'] }}</td>
         <td>{{ $socio['puestos'][0]['inquilino'] }}</td>
         <td rowspan="{{ count($socio['puestos']) }}">{{ $socio['fecha_registro'] }}</td>
       </tr>
       @for($i = 1; $i < count($socio['puestos']); $i++)
       <tr>
         <td>{{ $socio['puestos'][$i]['block'] }}</td>
-        <td>{{ $socio['puestos'][$i]['giro'] }}</td>
         <td>{{ $socio['puestos'][$i]['numero'] }}</td>
+        <td>{{ $socio['puestos'][$i]['giro'] }}</td>
         <td>{{ $socio['puestos'][$i]['inquilino'] }}</td>
       </tr>
       @endfor
