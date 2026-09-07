@@ -26,6 +26,11 @@
       background-color: #f8f9fa;
       font-weight: bold;
       text-align: center;
+      white-space: nowrap;
+    }
+
+    thead {
+      display: table-header-group;
     }
 
     h2 {
@@ -40,10 +45,10 @@
     <thead>
       <tr>
         <th>Bloque</th>
-        <th>Nro. Puesto</th>
-        <th>Area</th>
+        <th>N° Puesto</th>
+        <th>Área (m2)</th>
         <th>Giro de Negocio</th>
-        <th>Socio</th>
+        <th>Nombre del socio</th>
         <th>Inquilino</th>
         <th>Estado</th>
         <th>Fecha Registro</th>
