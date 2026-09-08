@@ -56,7 +56,7 @@
     <thead>
       <tr>
         <th>ID Cuota</th>
-        <th>Fec. Registro</th>
+        <th>Fecha Registro</th>
         <th>Nombre del socio</th>
         <th>N° Puesto</th>
         <th>Área (m2)</th>

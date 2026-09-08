@@ -100,7 +100,7 @@ class ReporteDeudasExport implements FromCollection, WithColumnFormatting, WithE
     public function headings(): array
     {
         return [
-            'Fec. Pago',
+            'Fecha Pago',
             'Servicios',
             'Total (S/.)',
             'Imp. Pagado (S/.)',

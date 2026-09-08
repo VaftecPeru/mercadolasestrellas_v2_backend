@@ -60,7 +60,7 @@
   <table>
     <thead>
       <tr>
-        <th>Fec. Pago</th>
+        <th>Fecha Pago</th>
         <th>Servicios</th>
         <th>Total (S/.)</th>
         <th>Imp. Pagado (S/.)</th>

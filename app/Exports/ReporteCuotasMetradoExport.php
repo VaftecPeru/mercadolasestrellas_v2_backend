@@ -6,19 +6,21 @@ use App\Models\Cuota;
 use App\Models\DetallePagos;
 use App\Models\Deuda;
 use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
+use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Events\AfterSheet;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class ReporteCuotasMetradoExport implements FromCollection, WithHeadings, WithStyles, WithEvents, WithColumnFormatting, WithStrictNullComparison
+class ReporteCuotasMetradoExport implements FromCollection, WithColumnFormatting, WithEvents, WithHeadings, WithStrictNullComparison, WithStyles
 {
     protected $filtro_id;
+
     protected $encabezado = ['-', '-'];
+
     private $count = 0;
 
     public function __construct($filtro_id)
@@ -33,7 +35,7 @@ class ReporteCuotasMetradoExport implements FromCollection, WithHeadings, WithSt
 
         $cuota = Cuota::find($this->filtro_id);
 
-        if (!$cuota) {
+        if (! $cuota) {
             return $default;
         }
 
@@ -47,16 +49,16 @@ class ReporteCuotasMetradoExport implements FromCollection, WithHeadings, WithSt
     {
         $id_cuota = $this->filtro_id;
         $deudas = Deuda::whereExists(function ($query) use ($id_cuota) {
-                $query->select("deuda_cuotas.id_deuda")
-                    ->from('deuda_cuotas')
-                    ->join('cuota_servicios','deuda_cuotas.id_cuota_servicio','cuota_servicios.id_cuota_servicio')
-                    ->whereRaw('deudas.id_deuda = deuda_cuotas.id_deuda')
-                    ->where('cuota_servicios.id_cuota', $id_cuota);
-            })
+            $query->select('deuda_cuotas.id_deuda')
+                ->from('deuda_cuotas')
+                ->join('cuota_servicios', 'deuda_cuotas.id_cuota_servicio', 'cuota_servicios.id_cuota_servicio')
+                ->whereRaw('deudas.id_deuda = deuda_cuotas.id_deuda')
+                ->where('cuota_servicios.id_cuota', $id_cuota);
+        })
             ->get()
             ->map(function ($deuda) use ($id_cuota) {
 
-                $importeSuma = DetallePagos::where('id_deuda',$deuda->id_deuda)->sum('importe');
+                $importeSuma = DetallePagos::where('id_deuda', $deuda->id_deuda)->sum('importe');
                 $importe_pagado = $importeSuma ? $importeSuma : 0;
 
                 return [
@@ -73,6 +75,7 @@ class ReporteCuotasMetradoExport implements FromCollection, WithHeadings, WithSt
             });
 
         $this->count = count($deudas);
+
         return $deudas;
     }
 
@@ -80,22 +83,22 @@ class ReporteCuotasMetradoExport implements FromCollection, WithHeadings, WithSt
     {
         return [
             'ID Cuota',
-            'Fec. Registro',
+            'Fecha Registro',
             'Nombre del socio',
             'N° Puesto',
             'Área (m2)',
             'Total (S/)',
             'Imp. Pagado (S/.)',
-            'Imp. Por pagar (S/)'
+            'Imp. Por pagar (S/)',
         ];
     }
 
     public function columnFormats(): array
     {
-        return[
+        return [
             'F' => NumberFormat::FORMAT_NUMBER_00,
             'G' => NumberFormat::FORMAT_NUMBER_00,
-            'H' => NumberFormat::FORMAT_NUMBER_00
+            'H' => NumberFormat::FORMAT_NUMBER_00,
         ];
     }
 
@@ -111,7 +114,7 @@ class ReporteCuotasMetradoExport implements FromCollection, WithHeadings, WithSt
     public function registerEvents(): array
     {
         return [
-            AfterSheet::class => function(AfterSheet $event) {
+            AfterSheet::class => function (AfterSheet $event) {
                 // Inserta el bloque de cabecera (Fecha de emisión, Fecha de vencimiento)
                 // en las filas 1-2. La fila de encabezados pasa a la fila 3 y los datos a partir de la 4.
                 $event->sheet->getDelegate()->insertNewRowBefore(1, 2);
@@ -119,22 +122,22 @@ class ReporteCuotasMetradoExport implements FromCollection, WithHeadings, WithSt
                 $labels = ['Fecha de emisión', 'Fecha de vencimiento'];
                 foreach ($labels as $i => $label) {
                     $column = chr(65 + $i);
-                    $event->sheet->setCellValue($column . '1', $label);
-                    $event->sheet->setCellValue($column . '2', $this->encabezado[$i]);
+                    $event->sheet->setCellValue($column.'1', $label);
+                    $event->sheet->setCellValue($column.'2', $this->encabezado[$i]);
                 }
                 $event->sheet->getStyle('A1:B1')->getFont()->setBold(true);
 
                 if ($this->count > 0) {
                     $lastRow = $event->sheet->getHighestRow() + 1;
-                    $event->sheet->setCellValue('A' . ($lastRow), 'Total (S/.)');
+                    $event->sheet->setCellValue('A'.($lastRow), 'Total (S/.)');
                     $event->sheet->mergeCells("A{$lastRow}:D{$lastRow}");
                     $event->sheet->getStyle("A{$lastRow}")->getAlignment()->setHorizontal('right');
                     $event->sheet->getStyle("A{$lastRow}:H{$lastRow}")->getFont()->setBold(true);
-                    $event->sheet->setCellValue('F' . ($lastRow), '=SUM(F4:F' . ($lastRow - 1) . ')');
-                    $event->sheet->setCellValue('G' . ($lastRow), '=SUM(G4:G' . ($lastRow - 1) . ')');
-                    $event->sheet->setCellValue('H' . ($lastRow), '=SUM(H4:H' . ($lastRow - 1) . ')');
+                    $event->sheet->setCellValue('F'.($lastRow), '=SUM(F4:F'.($lastRow - 1).')');
+                    $event->sheet->setCellValue('G'.($lastRow), '=SUM(G4:G'.($lastRow - 1).')');
+                    $event->sheet->setCellValue('H'.($lastRow), '=SUM(H4:H'.($lastRow - 1).')');
                 }
-            }
+            },
         ];
     }
 }

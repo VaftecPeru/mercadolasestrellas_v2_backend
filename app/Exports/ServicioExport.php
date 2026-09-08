@@ -9,43 +9,41 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class ServicioExport implements FromCollection, WithHeadings, WithStyles
-{    /**
+{
+    /**
      * @return \Illuminate\Support\Collection
      */
-    
     public function collection()
     {
-        return Servicio::where('activo', true)->get()->map(function($servicio) {
+        return Servicio::where('activo', true)->get()->map(function ($servicio) {
             return [
-                'id' => $servicio->id_servicio ?? '------', 
-                'nombre' => $servicio->nombre ?? '------', 
-                'costo_unitario' => $servicio->costo_unitario ?? '------', 
+                'id' => $servicio->id_servicio ?? '------',
+                'nombre' => $servicio->nombre ?? '------',
+                'costo_unitario' => $servicio->costo_unitario ?? '------',
                 'tipo_servicio' => $servicio->tipo_servicio === 3 ? 'Servicio por metros cuadrados' : ($servicio->tipo_servicio === 2 ? 'Extraordinario' : 'Ordinario'),
-                'fecha_registro' => $servicio->fecha_registro ?? '------', 
+                'fecha_registro' => $servicio->fecha_registro ? \Carbon\Carbon::parse($servicio->fecha_registro)->format('Y-m-d') : '------',
             ];
         });
     }
-    
+
     public function headings(): array
     {
         return [
             'ID',
-            'Descripcion',
+            'Nombre del servicio',
             'Costo Unitario',
-            'Tipo Servicio',
-            'Fecha registro',
+            'Tipo de Servicio',
+            'Fecha Registro',
         ];
     }
 
     public function styles(Worksheet $sheet)
     {
-       
+
         $sheet->getStyle(1)->getFont()->setBold(true);
 
-      
         foreach (range('A', 'E') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
     }
-
 }

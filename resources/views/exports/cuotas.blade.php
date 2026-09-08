@@ -40,8 +40,8 @@
     <thead>
       <tr>
         <th>ID</th>
-        <th>Fec. Emisión</th>
-        <th>Fec. Vencimiento</th>
+        <th>Fecha Emisión</th>
+        <th>Fecha Vencimiento</th>
         <th>Importe</th>
         <th>Puestos Asignados</th>
         <th>Servicios</th>

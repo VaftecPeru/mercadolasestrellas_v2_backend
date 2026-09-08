@@ -2,25 +2,26 @@
 
 namespace App\Exports;
 
-use App\Models\Pago;
 use App\Models\DetallePagos;
 use App\Models\Deuda;
+use App\Models\Pago;
 use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
+use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Events\AfterSheet;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class PagosExport implements FromCollection, WithHeadings, WithStyles, WithEvents, WithColumnFormatting, WithStrictNullComparison
+class PagosExport implements FromCollection, WithColumnFormatting, WithEvents, WithHeadings, WithStrictNullComparison, WithStyles
 {
     private $count = 0;
+
     /**
-    * @return \Illuminate\Support\Collection
-    */
+     * @return \Illuminate\Support\Collection
+     */
     public function collection()
     {
         $rows = Pago::with([
@@ -28,7 +29,7 @@ class PagosExport implements FromCollection, WithHeadings, WithStyles, WithEvent
             'Socio.Usuario',
             'Socio.Persona',
             'DetallePagos',
-        ])->get()->map(function($pago) {
+        ])->get()->map(function ($pago) {
             $a_cuenta = '------';
 
             if ($pago->DetallePagos && $pago->DetallePagos->isNotEmpty()) {
@@ -37,7 +38,7 @@ class PagosExport implements FromCollection, WithHeadings, WithStyles, WithEvent
 
             // Calcular deuda restante igual que en PagoCollection
             $idsPuesto = $pago->DetallePagos->pluck('id_puesto')->unique()->toArray();
-            
+
             $importePago = DetallePagos::select('importe')
                 ->whereIn('id_puesto', $idsPuesto)
                 ->sum('importe');
@@ -47,24 +48,24 @@ class PagosExport implements FromCollection, WithHeadings, WithStyles, WithEvent
             $monto_actual = ($importeDeuda ?? 0) - ($importePago ?? 0);
 
             return [
-                'id' => $pago->id_pago ?? '------', 
-                'numero_puesto' => data_get($pago, 'Socio.Puestos.0.numero_puesto', '------'), 
-                // Obtener nombre del socio desde la tabla personas 
+                'id' => $pago->id_pago ?? '------',
+                'numero_puesto' => data_get($pago, 'Socio.Puestos.0.numero_puesto', '------'),
+                // Obtener nombre del socio desde la tabla personas
                 'socio' => data_get($pago, 'Socio.Persona.nombre_completo', '------') ?: data_get($pago, 'Socio.Usuario.nombre_usuario', '------'),
-                'dni' => data_get($pago, 'Socio.Persona.dni', '------'), 
-                'fecha_registro' => $pago->fecha_registro ?? '------', 
-                'telefono' => data_get($pago, 'Socio.Persona.telefono', '------'), 
-                'correo' => data_get($pago, 'Socio.Persona.correo', '------'), 
+                'dni' => data_get($pago, 'Socio.Persona.dni', '------'),
+                'fecha_registro' => $pago->fecha_registro ?? '------',
+                'telefono' => data_get($pago, 'Socio.Persona.telefono', '------'),
+                'correo' => data_get($pago, 'Socio.Persona.correo', '------'),
                 'a_cuenta' => $a_cuenta,
-                'monto_actual' => number_format($monto_actual, 2, '.', ''), 
+                'monto_actual' => number_format($monto_actual, 2, '.', ''),
             ];
         });
 
         $this->count = count($rows);
+
         return $rows;
     }
-    
-    
+
     public function headings(): array
     {
         return [
@@ -72,7 +73,7 @@ class PagosExport implements FromCollection, WithHeadings, WithStyles, WithEvent
             'Nro. Puesto',
             'Socio',
             'DNI',
-            'Fec. Pago',
+            'Fecha Pago',
             'Telefono',
             'Correo',
             'A cuenta',
@@ -90,10 +91,9 @@ class PagosExport implements FromCollection, WithHeadings, WithStyles, WithEvent
 
     public function styles(Worksheet $sheet)
     {
-        
+
         $sheet->getStyle(1)->getFont()->setBold(true);
 
-       
         foreach (range('A', 'I') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
@@ -102,10 +102,10 @@ class PagosExport implements FromCollection, WithHeadings, WithStyles, WithEvent
     public function registerEvents(): array
     {
         return [
-            AfterSheet::class => function(AfterSheet $event) {
+            AfterSheet::class => function (AfterSheet $event) {
                 if ($this->count > 0) {
                     $lastRow = $event->sheet->getHighestRow() + 1;
-                    $event->sheet->setCellValue('A' . $lastRow, 'Total (S/.)');
+                    $event->sheet->setCellValue('A'.$lastRow, 'Total (S/.)');
                     $event->sheet->mergeCells("A{$lastRow}:G{$lastRow}");
                     $event->sheet->getStyle("A{$lastRow}")->getAlignment()->setHorizontal('right');
                     $event->sheet->getStyle("A{$lastRow}:I{$lastRow}")->getFont()->setBold(true);
@@ -113,11 +113,10 @@ class PagosExport implements FromCollection, WithHeadings, WithStyles, WithEvent
                         ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
                         ->getStartColor()->setRGB('e3f2fd');
                     // SUM de las columnas H (A cuenta) e I (Monto Actual), datos desde fila 2
-                    $event->sheet->setCellValue('H' . $lastRow, '=SUM(H2:H' . ($lastRow - 1) . ')');
-                    $event->sheet->setCellValue('I' . $lastRow, '=SUM(I2:I' . ($lastRow - 1) . ')');
+                    $event->sheet->setCellValue('H'.$lastRow, '=SUM(H2:H'.($lastRow - 1).')');
+                    $event->sheet->setCellValue('I'.$lastRow, '=SUM(I2:I'.($lastRow - 1).')');
                 }
-            }
+            },
         ];
     }
-
 }

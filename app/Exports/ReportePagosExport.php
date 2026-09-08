@@ -25,7 +25,7 @@ class ReportePagosExport implements FromCollection, WithColumnFormatting, WithEv
 
     private $count = 0;
 
-    // true = columnas de la pestaña "Pagos Realizados": Fec. Pago | Comprobante | Concepto | Monto
+    // true = columnas de la pestaña "Pagos Realizados": Fecha Pago | Comprobante | Concepto | Monto
     private $modoDetalle = false;
 
     public function __construct($filtro_id)
@@ -129,7 +129,7 @@ class ReportePagosExport implements FromCollection, WithColumnFormatting, WithEv
     {
         if ($this->modoDetalle) {
             return [
-                'Fec. Pago',
+                'Fecha Pago',
                 'Comprobante',
                 'Concepto',
                 'Monto (S/.)',
@@ -137,7 +137,7 @@ class ReportePagosExport implements FromCollection, WithColumnFormatting, WithEv
         }
 
         return [
-            'Fec. Pago',
+            'Fecha Pago',
             'Servicios',
             'Total (S/.)',
             'Imp. Pagado (S/.)',

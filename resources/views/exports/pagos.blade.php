@@ -45,7 +45,7 @@
         <th>Nro. Puesto</th>
         <th>Socio</th>
         <th>DNI</th>
-        <th>Fec. Pago</th>
+        <th>Fecha Pago</th>
         <th>Telefono</th>
         <th>Correo</th>
         <th>A cuenta</th>

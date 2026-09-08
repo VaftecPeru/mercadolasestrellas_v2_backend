@@ -5,24 +5,24 @@ namespace App\Exports\PDF;
 use App\Models\Servicio;
 use Barryvdh\DomPDF\PDF;
 
-class ServicioPDFExport {
+class ServicioPDFExport
+{
+    public function generatePDF()
+    {
 
-  public function generatePDF() {
+        $servicios = Servicio::where('activo', true)->get()->map(function ($servicio) {
+            return [
+                'id' => $servicio->id_servicio ?? '------',
+                'nombre' => $servicio->nombre ?? '------',
+                'costo_unitario' => $servicio->costo_unitario ?? '------',
+                'tipo_servicio' => $servicio->tipo_servicio === 3 ? 'Servicio por metros cuadrados' : ($servicio->tipo_servicio === 2 ? 'Extraordinario' : 'Ordinario'),
+                'fecha_registro' => $servicio->fecha_registro ? \Carbon\Carbon::parse($servicio->fecha_registro)->format('Y-m-d') : '------',
+            ];
+        });
 
-    $servicios = Servicio::where('activo', true)->get()->map(function($servicio) {
-      return [
-        'id' => $servicio->id_servicio ?? '------',
-        'nombre' => $servicio->nombre ?? '------',
-        'descripcion' => $servicio->nombre ?? '------',
-        'costo_unitario' => $servicio->costo_unitario ?? '------',
-        'tipo_servicio' => $servicio->tipo_servicio === 3 ? 'Servicio por metros cuadrados' : ($servicio->tipo_servicio === 2 ? 'Extraordinario' : 'Ordinario'),
-        'fecha_registro' => $servicio->fecha_registro ?? '------',
-      ];
-    });
+        $pdf = app(PDF::class)->loadView('exports.servicios', ['servicios' => $servicios]);
 
-    $pdf = app(PDF::class)->loadView('exports.servicios', ['servicios' => $servicios]);
-    return $pdf->download('servicios.pdf');
+        return $pdf->download('servicios.pdf');
 
-  }
-
+    }
 }

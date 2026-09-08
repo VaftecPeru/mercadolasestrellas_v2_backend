@@ -61,12 +61,12 @@
     <thead>
       <tr>
         @if($modo_detalle ?? false)
-          <th>Fec. Pago</th>
+          <th>Fecha Pago</th>
           <th>Comprobante</th>
           <th>Concepto</th>
           <th>Monto (S/.)</th>
         @else
-          <th>Fec. Pago</th>
+          <th>Fecha Pago</th>
           <th>Servicios</th>
           <th>Total (S/.)</th>
           <th>Imp. Pagado (S/.)</th>
