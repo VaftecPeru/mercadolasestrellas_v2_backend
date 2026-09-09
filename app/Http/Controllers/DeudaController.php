@@ -44,10 +44,15 @@ class DeudaController extends Controller
                 DB::raw('max(date(deudas.fecha_registro)) as fecha'),
                 DB::raw('max(year(deudas.fecha_registro)) as anio'),
                 DB::raw('max((select nombre from setup_mes where setup_mes.id_mes = MONTH(deudas.fecha_registro))) AS mes'),
+                DB::raw('max((select numero_puesto from puestos p where p.id_puesto = deudas.id_puesto)) as numero_puesto'),
                 DB::raw('max(deuda_cuotas.monto) as total'),
                 DB::raw('max(deuda_cuotas.monto) - sum(coalesce(detalle_pagos.importe,0)) as por_pagar'),
                 DB::raw('coalesce(sum(detalle_pagos.importe),0) as a_cuenta')
             );
+
+        if ($request->has('id_socio') && $request->id_socio != '') {
+            $query->where('deudas.id_socio', $request->id_socio);
+        }
 
         if ($request->has('id_puesto') && $request->id_puesto != '') {
             $query->where('deudas.id_puesto', $request->id_puesto);
