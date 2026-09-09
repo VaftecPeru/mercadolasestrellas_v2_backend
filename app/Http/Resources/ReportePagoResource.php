@@ -24,9 +24,11 @@ class ReportePagoResource extends JsonResource
             // Consulta directa a la base de datos para obtener los detalles
             $queryDetalles = DB::table('detalle_pagos')
                 ->leftJoin('servicios', 'detalle_pagos.id_servicio', '=', 'servicios.id_servicio')
+                ->leftJoin('puestos', 'detalle_pagos.id_puesto', '=', 'puestos.id_puesto')
                 ->select(
                     'detalle_pagos.importe',
-                    'servicios.nombre as descripcion'
+                    'servicios.nombre as descripcion',
+                    'puestos.numero_puesto as puesto'
                 )
                 ->where('detalle_pagos.id_pago', $this->id_pago);
 
@@ -46,6 +48,7 @@ class ReportePagoResource extends JsonResource
                     return [
                         'importe' => number_format($d->importe, 2, '.', ''),
                         'descripcion' => $d->descripcion ?? 'Servicio/Aporte',
+                        'puesto' => $d->puesto ?? '',
                     ];
                 }),
             ];
