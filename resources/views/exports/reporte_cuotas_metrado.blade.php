@@ -26,6 +26,11 @@
       background-color: #f8f9fa;
       font-weight: bold;
       text-align: center;
+      white-space: nowrap;
+    }
+
+    thead {
+      display: table-header-group;
     }
 
     h2 {
@@ -55,7 +60,6 @@
   <table>
     <thead>
       <tr>
-        <th>ID Cuota</th>
         <th>Fecha Registro</th>
         <th>Nombre del socio</th>
         <th>N° Puesto</th>
@@ -68,7 +72,6 @@
     <tbody>
       @foreach($deudas as $deuda)
         <tr>
-          <td>{{ $deuda['id_cuota'] }}</td>
           <td>{{ $deuda['fecha_registro'] }}</td>
           <td>{{ $deuda['nombre_completo'] }}</td>
           <td>{{ $deuda['numero_puesto'] }}</td>
@@ -81,7 +84,7 @@
     </tbody>
     <tfoot>
       <tr>
-        <th colspan="5" class="right">Total (S/.)</th>
+        <th colspan="4" class="right">Total (S/.)</th>
         <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total, 2) }}</th>
         <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_pagado, 2) }}</th>
         <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_por_pagar, 2) }}</th>

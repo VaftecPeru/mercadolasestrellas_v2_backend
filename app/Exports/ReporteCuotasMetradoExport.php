@@ -56,14 +56,13 @@ class ReporteCuotasMetradoExport implements FromCollection, WithColumnFormatting
                 ->where('cuota_servicios.id_cuota', $id_cuota);
         })
             ->get()
-            ->map(function ($deuda) use ($id_cuota) {
+            ->map(function ($deuda) {
 
                 $importeSuma = DetallePagos::where('id_deuda', $deuda->id_deuda)->sum('importe');
                 $importe_pagado = $importeSuma ? $importeSuma : 0;
 
                 return [
-                    'id_cuota' => $id_cuota,
-                    'fecha' => $deuda->fecha_registro,
+                    'fecha' => $deuda->fecha_registro ? \Carbon\Carbon::parse($deuda->fecha_registro)->format('Y-m-d') : '',
                     'nombre_completo' => $deuda->socio && $deuda->socio->persona ? $deuda->socio->persona->nombre_completo : '',
                     'numero_puesto' => $deuda->puesto ? $deuda->puesto->numero_puesto : '',
                     'area' => $deuda->puesto ? $deuda->puesto->area : '',
@@ -82,7 +81,6 @@ class ReporteCuotasMetradoExport implements FromCollection, WithColumnFormatting
     public function headings(): array
     {
         return [
-            'ID Cuota',
             'Fecha Registro',
             'Nombre del socio',
             'N° Puesto',
@@ -96,9 +94,9 @@ class ReporteCuotasMetradoExport implements FromCollection, WithColumnFormatting
     public function columnFormats(): array
     {
         return [
+            'E' => NumberFormat::FORMAT_NUMBER_00,
             'F' => NumberFormat::FORMAT_NUMBER_00,
             'G' => NumberFormat::FORMAT_NUMBER_00,
-            'H' => NumberFormat::FORMAT_NUMBER_00,
         ];
     }
 
@@ -106,7 +104,7 @@ class ReporteCuotasMetradoExport implements FromCollection, WithColumnFormatting
     {
         $sheet->getStyle(1)->getFont()->setBold(true);
 
-        foreach (range('A', 'H') as $column) {
+        foreach (range('A', 'G') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
     }
@@ -132,10 +130,10 @@ class ReporteCuotasMetradoExport implements FromCollection, WithColumnFormatting
                     $event->sheet->setCellValue('A'.($lastRow), 'Total (S/.)');
                     $event->sheet->mergeCells("A{$lastRow}:D{$lastRow}");
                     $event->sheet->getStyle("A{$lastRow}")->getAlignment()->setHorizontal('right');
-                    $event->sheet->getStyle("A{$lastRow}:H{$lastRow}")->getFont()->setBold(true);
+                    $event->sheet->getStyle("A{$lastRow}:G{$lastRow}")->getFont()->setBold(true);
+                    $event->sheet->setCellValue('E'.($lastRow), '=SUM(E4:E'.($lastRow - 1).')');
                     $event->sheet->setCellValue('F'.($lastRow), '=SUM(F4:F'.($lastRow - 1).')');
                     $event->sheet->setCellValue('G'.($lastRow), '=SUM(G4:G'.($lastRow - 1).')');
-                    $event->sheet->setCellValue('H'.($lastRow), '=SUM(H4:H'.($lastRow - 1).')');
                 }
             },
         ];

@@ -5,6 +5,7 @@ namespace App\Exports;
 use App\Models\DetallePagos;
 use App\Models\Deuda;
 use App\Models\Pago;
+use App\Support\Comprobante;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithEvents;
@@ -29,7 +30,7 @@ class PagosExport implements FromCollection, WithColumnFormatting, WithEvents, W
             'Socio.Usuario',
             'Socio.Persona',
             'DetallePagos',
-        ])->get()->map(function ($pago) {
+        ])->orderBy('fecha_registro', 'desc')->get()->map(function ($pago) {
             $a_cuenta = '------';
 
             if ($pago->DetallePagos && $pago->DetallePagos->isNotEmpty()) {
@@ -48,7 +49,7 @@ class PagosExport implements FromCollection, WithColumnFormatting, WithEvents, W
             $monto_actual = ($importeDeuda ?? 0) - ($importePago ?? 0);
 
             return [
-                'id' => $pago->id_pago ?? '------',
+                'id' => Comprobante::formatear($pago->serie, $pago->numero_pago),
                 'numero_puesto' => data_get($pago, 'Socio.Puestos.0.numero_puesto', '------'),
                 // Obtener nombre del socio desde la tabla personas
                 'socio' => data_get($pago, 'Socio.Persona.nombre_completo', '------') ?: data_get($pago, 'Socio.Usuario.nombre_usuario', '------'),
@@ -56,7 +57,7 @@ class PagosExport implements FromCollection, WithColumnFormatting, WithEvents, W
                 'fecha_registro' => $pago->fecha_registro ?? '------',
                 'telefono' => data_get($pago, 'Socio.Persona.telefono', '------'),
                 'correo' => data_get($pago, 'Socio.Persona.correo', '------'),
-                'a_cuenta' => $a_cuenta,
+                'a_cuenta' => is_numeric($a_cuenta) ? number_format((float) $a_cuenta, 2, '.', '') : $a_cuenta,
                 'monto_actual' => number_format($monto_actual, 2, '.', ''),
             ];
         });
