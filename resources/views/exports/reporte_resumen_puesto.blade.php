@@ -60,13 +60,12 @@
   <table>
     <thead>
       <tr>
-        <th>Nro. Pago</th>
+        <th>N° Recibo</th>
         <th>Imp. Ingreso</th>
         <th>Imp. Gastos Administrativos</th>
         <th>Imp. Multas Inasistencia</th>
         <th>Imp. Pagos transferencia</th>
         <th>Imp. Cuotas Extraordinarias</th>
-        <th>Imp. Total</th>
       </tr>
     </thead>
     <tbody>
@@ -78,7 +77,6 @@
           <td class="right">S/ {{ number_format($pago['importe_multas_inasistencia'], 2) }}</td>
           <td class="right">S/ {{ number_format($pago['importe_pagos_transferencia'], 2) }}</td>
           <td class="right">S/ {{ number_format($pago['importe_cuotas_extraordinarias'], 2) }}</td>
-          <td class="right">S/ {{ number_format($pago['importe_total'], 2) }}</td>
         </tr>
       @endforeach
     </tbody>
@@ -90,7 +88,6 @@
         <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_multas_inasistencia, 2) }}</th>
         <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_pagos_transferencia, 2) }}</th>
         <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_cuotas_extraordinarias, 2) }}</th>
-        <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_total, 2) }}</th>
       </tr>
     </tfoot>
   </table>

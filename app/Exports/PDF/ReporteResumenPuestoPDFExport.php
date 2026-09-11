@@ -31,7 +31,6 @@ class ReporteResumenPuestoPDFExport
                     'importe_multas_inasistencia' => 0,
                     'importe_pagos_transferencia' => 0,
                     'importe_cuotas_extraordinarias' => 0,
-                    'importe_total' => $detallePagos->importe,
                 ];
             });
 
@@ -41,7 +40,6 @@ class ReporteResumenPuestoPDFExport
         $total_importe_multas_inasistencia = Util::sumaColArrayObjFormat($pagosArray, 'importe_multas_inasistencia');
         $total_importe_pagos_transferencia = Util::sumaColArrayObjFormat($pagosArray, 'importe_pagos_transferencia');
         $total_importe_cuotas_extraordinarias = Util::sumaColArrayObjFormat($pagosArray, 'importe_cuotas_extraordinarias');
-        $total_importe_total = Util::sumaColArrayObjFormat($pagosArray, 'importe_total');
 
         $pdf = app(PDF::class)->loadView('exports.reporte_resumen_puesto', [
             'nombre_socio' => $nombre_socio,
@@ -55,7 +53,6 @@ class ReporteResumenPuestoPDFExport
             'total_importe_multas_inasistencia' => $total_importe_multas_inasistencia,
             'total_importe_pagos_transferencia' => $total_importe_pagos_transferencia,
             'total_importe_cuotas_extraordinarias' => $total_importe_cuotas_extraordinarias,
-            'total_importe_total' => $total_importe_total,
         ]);
 
         return $pdf->download('reporte_resumen_puesto.pdf');

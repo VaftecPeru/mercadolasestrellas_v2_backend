@@ -63,7 +63,6 @@ class ReporteResumenExport implements FromCollection, WithColumnFormatting, With
                     'importe_multas_inasistencia' => 0,
                     'importe_pagos_transferencia' => 0,
                     'importe_cuotas_extraordinarias' => 0,
-                    'importe_total' => $detallePagos->importe,
                 ];
             });
 
@@ -75,13 +74,12 @@ class ReporteResumenExport implements FromCollection, WithColumnFormatting, With
     public function headings(): array
     {
         return [
-            'Nro. Pago',
+            'N° Recibo',
             'Imp. Ingreso',
             'Imp. Gastos Administrativo',
             'Imp. Multas Inasistencia',
             'Imp. Pagos Transferencia',
             'Imp. Cuotas Extraordinarias',
-            'Imp. Total',
         ];
     }
 
@@ -93,7 +91,6 @@ class ReporteResumenExport implements FromCollection, WithColumnFormatting, With
             'D' => NumberFormat::FORMAT_NUMBER_00,
             'E' => NumberFormat::FORMAT_NUMBER_00,
             'F' => NumberFormat::FORMAT_NUMBER_00,
-            'G' => NumberFormat::FORMAT_NUMBER_00,
         ];
     }
 
@@ -101,7 +98,7 @@ class ReporteResumenExport implements FromCollection, WithColumnFormatting, With
     {
         $sheet->getStyle(1)->getFont()->setBold(true);
 
-        foreach (range('A', 'G') as $column) {
+        foreach (range('A', 'F') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
     }
@@ -125,13 +122,12 @@ class ReporteResumenExport implements FromCollection, WithColumnFormatting, With
                     $lastRow = $event->sheet->getHighestRow() + 1;
                     $event->sheet->setCellValue('A'.($lastRow), 'Total (S/.)');
                     $event->sheet->getStyle("A{$lastRow}")->getAlignment()->setHorizontal('right');
-                    $event->sheet->getStyle("A{$lastRow}:G{$lastRow}")->getFont()->setBold(true);
+                    $event->sheet->getStyle("A{$lastRow}:F{$lastRow}")->getFont()->setBold(true);
                     $event->sheet->setCellValue('B'.($lastRow), '=SUM(B4:B'.($lastRow - 1).')');
                     $event->sheet->setCellValue('C'.($lastRow), '=SUM(C4:C'.($lastRow - 1).')');
                     $event->sheet->setCellValue('D'.($lastRow), '=SUM(D4:D'.($lastRow - 1).')');
                     $event->sheet->setCellValue('E'.($lastRow), '=SUM(E4:E'.($lastRow - 1).')');
                     $event->sheet->setCellValue('F'.($lastRow), '=SUM(F4:F'.($lastRow - 1).')');
-                    $event->sheet->setCellValue('G'.($lastRow), '=SUM(G4:G'.($lastRow - 1).')');
                 }
             },
         ];

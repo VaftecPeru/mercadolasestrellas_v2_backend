@@ -26,6 +26,11 @@
       background-color: #f8f9fa;
       font-weight: bold;
       text-align: center;
+      white-space: nowrap;
+    }
+
+    thead {
+      display: table-header-group;
     }
 
     h2 {
@@ -60,29 +65,27 @@
   <table>
     <thead>
       <tr>
-        <th>ID Cuota</th>
-        <th>Servicio</th>
+        <th>Fecha Registro</th>
+        <th>Servicios</th>
         <th>Total (S/.)</th>
         <th>Imp. Pagado (S/.)</th>
         <th>Imp. Por pagar (S/.)</th>
-        <th>Fecha de registro</th>
       </tr>
     </thead>
     <tbody>
       @foreach($deudas as $deuda)
         <tr>
-          <td>{{ $deuda['id_cuota'] }}</td>
+          <td align="center">{{ $deuda['fecha_registro'] }}</td>
           <td>{{ $deuda['servicio_descripcion'] }}</td>
           <td class="right">S/ {{ number_format($deuda['total_deuda'], 2) }}</td>
           <td class="right">S/ {{ number_format($deuda['importe_pagado'], 2) }}</td>
           <td class="right">S/ {{ number_format($deuda['importe_por_pagar'], 2) }}</td>
-          <td>{{ $deuda['fecha_registro'] }}</td>
         </tr>
       @endforeach
     </tbody>
     <tfoot>
       <tr>
-        <th colspan="3" class="right">Total (S/.)</th>
+        <th colspan="2" class="right">Total (S/.)</th>
         <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total, 2) }}</th>
         <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_pagado, 2) }}</th>
         <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_por_pagar, 2) }}</th>
