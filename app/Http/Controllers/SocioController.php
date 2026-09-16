@@ -9,13 +9,20 @@ use App\Models\Persona;
 use App\Models\Puesto;
 use App\Models\Socio;
 use App\Models\Usuario;
+use App\Services\UsuarioService;
+use App\Support\ScopeSocio;
 use App\Support\Texto;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
 
 class SocioController extends Controller
 {
+    use ScopeSocio;
+
+    public function __construct(private UsuarioService $usuarioService) {}
+
     public function index(Request $request)
     {
         $per_page = 16;
@@ -25,6 +32,13 @@ class SocioController extends Controller
 
         $listado = Socio::with(['Persona', 'Usuario', 'Puestos.Block', 'Puestos.Gironegocio', 'Puestos.Inquilino'])
             ->where('socios.estado', '1');
+
+        if ($this->esSocio($request)) {
+            $idSocio = $this->idSocioAutenticado($request);
+            if ($idSocio !== null) {
+                $listado->where('socios.id_socio', $idSocio);
+            }
+        }
 
         if (isset($request->nombre_socio)) {
             $texto = strtr(utf8_decode($request->nombre_socio), utf8_decode('àáâãäçèéêëìíîïñòóôõöùúûüýÿÀÁÂÃÄÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ'), 'aaaaaceeeeiiiinooooouuuuyyAAAAACEEEEIIIINOOOOOUUUUY');
@@ -46,10 +60,19 @@ class SocioController extends Controller
         return new SocioCollection($listado->paginate($per_page));
     }
 
-    public function seleccionarSocio()
+    public function seleccionarSocio(Request $request)
     {
-        $socios = Socio::join('personas as c', 'socios.id_socio', 'c.id_persona')
-            ->where('socios.estado', '1')
+        $query = Socio::join('personas as c', 'socios.id_socio', 'c.id_persona')
+            ->where('socios.estado', '1');
+
+        if ($this->esSocio($request)) {
+            $idSocio = $this->idSocioAutenticado($request);
+            if ($idSocio !== null) {
+                $query->where('socios.id_socio', $idSocio);
+            }
+        }
+
+        $socios = $query
             ->select('socios.id_socio', 'c.nombre_completo', 'c.dni', 'c.telefono', 'c.correo')
             ->get()
             ->map(function ($socio) {
@@ -117,42 +140,58 @@ class SocioController extends Controller
         }
 
         $nombre_completo = $request->input('nombre').' '.$request->input('apellido_paterno').' '.$request->input('apellido_materno');
-        // Registro de Persona
-        $persona = new Persona;
-        // $persona->id_socio = $usuario->id_usuario;
-        // $persona->id_usuario = $usuario->id_usuario;
-        $persona->nombre = $request->input('nombre');
-        $persona->apellido_paterno = $request->input('apellido_paterno');
-        $persona->apellido_materno = $request->input('apellido_materno');
-        $persona->dni = $request->input('dni');
-        $persona->correo = $request->input('correo');
-        $persona->telefono = $request->input('telefono');
-        $persona->direccion = $request->input('direccion');
-        $persona->sexo = $request->input('sexo');
-        $persona->estado = $request->input('estado');
-        // $persona->fecha_registro = Carbon::now();
-        $persona->fecha_registro = $request->input('fecha_registro');
-        $persona->nombre_completo = $nombre_completo;
-        $persona->save();
 
-        // Registro de socio (solo ID, fecha y estado - los datos personales vienen de Persona)
-        $socio = new Socio;
-        $socio->id_socio = $persona->id_persona;
-        $socio->fecha_registro = $request->input('fecha_registro');
-        $socio->estado = $request->input('estado');
-        $socio->save();
+        // Registro transaccional de Persona + Socio + Usuario (rollback ante cualquier fallo)
+        $resultado = DB::transaction(function () use ($request, $nombre_completo) {
+            // Registro de Persona
+            $persona = new Persona;
+            $persona->nombre = $request->input('nombre');
+            $persona->apellido_paterno = $request->input('apellido_paterno');
+            $persona->apellido_materno = $request->input('apellido_materno');
+            $persona->dni = $request->input('dni');
+            $persona->correo = $request->input('correo');
+            $persona->telefono = $request->input('telefono');
+            $persona->direccion = $request->input('direccion');
+            $persona->sexo = $request->input('sexo');
+            $persona->estado = $request->input('estado');
+            $persona->fecha_registro = $request->input('fecha_registro');
+            $persona->nombre_completo = $nombre_completo;
+            $persona->save();
+
+            // Registro de socio (solo ID, fecha y estado - los datos personales vienen de Persona)
+            $socio = new Socio;
+            $socio->id_socio = $persona->id_persona;
+            $socio->fecha_registro = $request->input('fecha_registro');
+            $socio->estado = $request->input('estado');
+            $socio->save();
+
+            // Creación de la cuenta de acceso del socio
+            $cuenta = $this->usuarioService->generarCuentaSocio($socio);
+
+            return ['socio' => $socio, 'cuenta' => $cuenta];
+        });
+
+        $socio = $resultado['socio'];
+        $cuenta = $resultado['cuenta'];
 
         // Se asigna el puesto al socio
-        if ($request->input('id_puesto') == null) {
-            return response()->json(['data' => $socio, 'message' => 'Socio registrado correctamente']);
+        if ($request->input('id_puesto') != null) {
+            $puesto = Puesto::where('id_puesto', $request->input('id_puesto'))->first();
+            $puesto->id_socio = $socio->id_socio;
+            $puesto->estado = 2;
+            $puesto->update();
         }
 
-        $puesto = Puesto::where('id_puesto', $request->input('id_puesto'))->first();
-        $puesto->id_socio = $socio->id_socio;
-        $puesto->estado = 2;
-        $puesto->update();
+        $data = ['data' => $socio, 'message' => 'Socio registrado correctamente'];
 
-        return response()->json(['data' => $socio, 'message' => 'Socio registrado correctamente']);
+        if ($cuenta['creado']) {
+            $data['acceso'] = [
+                'nombre_usuario' => $cuenta['usuario']->nombre_usuario,
+                'password_temporal' => $cuenta['password_temporal'],
+            ];
+        }
+
+        return response()->json($data);
     }
 
     public function update(Request $request, $id_socio)
@@ -219,7 +258,7 @@ class SocioController extends Controller
         // Actualizar datos de usuario (si existe)
         $usuario = Usuario::where('id_usuario', $socio->id_usuario)->first();
         if ($usuario) {
-            $usuario->nombre_usuario = $nombre_completo;
+            $usuario->nombre_usuario = $request->input('dni');
             $usuario->estado = $request->input('estado');
             $usuario->update();
         }
@@ -253,6 +292,48 @@ class SocioController extends Controller
         }
 
         return response()->json(['message' => 'El socio fue eliminado correctamente']);
+    }
+
+    public function toggleAcceso(Request $request, $id_socio)
+    {
+        $socio = Socio::find($id_socio);
+
+        if (! $socio) {
+            return response()->json(['error' => 'El socio no existe.'], 400);
+        }
+
+        try {
+            $resultado = $this->usuarioService->toggleAcceso($socio);
+
+            $mensaje = $resultado['habilitado']
+                ? 'El acceso del socio fue habilitado.'
+                : 'El acceso del socio fue deshabilitado.';
+
+            return response()->json(['message' => $mensaje, 'data' => $resultado], 200);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
+    }
+
+    public function regenerarCredenciales(Request $request, $id_socio)
+    {
+        $socio = Socio::find($id_socio);
+
+        if (! $socio) {
+            return response()->json(['error' => 'El socio no existe.'], 400);
+        }
+
+        try {
+            $resultado = $this->usuarioService->regenerarCredenciales($socio);
+
+            return response()->json([
+                'message' => 'Credenciales regeneradas correctamente.',
+                'nombre_usuario' => $resultado['usuario']->nombre_usuario,
+                'password_temporal' => $resultado['password_temporal'],
+            ], 200);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
     }
 
     public function export()

@@ -11,12 +11,15 @@ use App\Models\DeudaCuota;
 use App\Models\PuestoCuota;
 use App\Models\Servicio;
 use App\Support\FiltroTexto;
+use App\Support\ScopeSocio;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class DeudaController extends Controller
 {
+    use ScopeSocio;
+
     /**
      * Display a listing of the resource.
      */
@@ -32,6 +35,8 @@ class DeudaController extends Controller
     public function deudaPendientes(Request $request)
     {
         $per_page = $request->get('per_page', 15);
+
+        $this->aplicarScopeSocio($request);
 
         $query = DeudaCuota::join('deudas', 'deuda_cuotas.id_deuda', 'deudas.id_deuda')
             ->join('cuota_servicios', 'deuda_cuotas.id_cuota_servicio', 'cuota_servicios.id_cuota_servicio')

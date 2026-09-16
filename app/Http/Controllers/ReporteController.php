@@ -21,15 +21,20 @@ use App\Models\Deuda;
 use App\Models\Pago;
 use App\Support\Comprobante;
 use App\Support\FiltroTexto;
+use App\Support\ScopeSocio;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ReporteController extends Controller
 {
+    use ScopeSocio;
+
     public function pagos(Request $request)
     {
         $per_page = $request->get('per_page', 15);
+
+        $this->aplicarScopeSocio($request);
 
         $query = Pago::query();
 
@@ -59,6 +64,8 @@ class ReporteController extends Controller
     public function exportReportePagos(Request $request)
     {
 
+        $this->aplicarScopeSocio($request);
+
         $filtro = $request->id_puesto ?? $request->id_socio;
 
         return Excel::download(new ReportePagosExport($filtro), 'reporte_pagos.xlsx');
@@ -67,6 +74,9 @@ class ReporteController extends Controller
     public function exportReportePagosPDF(Request $request)
     {
         $export = new ReportePagosPDFExport;
+
+        $this->aplicarScopeSocio($request);
+
         $filtro = $request->id_puesto ?? $request->id_socio;
 
         return $export->generatePDF($filtro);
@@ -84,12 +94,20 @@ class ReporteController extends Controller
 
     public function exportReporteDeudas(Request $request)
     {
+        if (! $this->verificarPuestoDelSocio($request)) {
+            return response()->json(['message' => 'No tiene permiso para realizar esta acción.'], 403);
+        }
+
         return Excel::download(new ReporteDeudasExport($request->id_puesto, $request->nombre_socio), 'reporte_deudas.xlsx');
     }
 
     public function exportReporteDeudasPDF(Request $request)
     {
         $export = new ReporteDeudasPDFExport;
+
+        if (! $this->verificarPuestoDelSocio($request)) {
+            return response()->json(['message' => 'No tiene permiso para realizar esta acción.'], 403);
+        }
 
         return $export->generatePDF($request->id_puesto, $request->nombre_socio);
     }

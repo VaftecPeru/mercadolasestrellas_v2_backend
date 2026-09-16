@@ -6,12 +6,15 @@ use App\Exports\PDF\PuestosPDFExport;
 use App\Exports\PuestosExport;
 use App\Http\Resources\PuestoCollection;
 use App\Models\Puesto;
+use App\Support\ScopeSocio;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
 
 class PuestoController extends Controller
 {
+    use ScopeSocio;
+
     public function index(Request $request)
     {
         $per_page = 15;
@@ -19,6 +22,8 @@ class PuestoController extends Controller
         if (isset($request->per_page)) {
             $per_page = $request->per_page;
         }
+
+        $this->aplicarScopeSocio($request);
 
         $paginate = Puesto::select('puestos.*')
             ->with(['socio.persona', 'gironegocio', 'block', 'inquilino']) // Cargar relaciones para evitar N+1

@@ -2,9 +2,9 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Puesto;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Support\Facades\DB;
-use App\Models\Puesto;
 
 class SocioCollection extends ResourceCollection
 {
@@ -28,29 +28,38 @@ class SocioCollection extends ResourceCollection
                 // Calcular deuda sumando todos los puestos del socio
                 if ($puestos->isNotEmpty()) {
                     foreach ($puestos as $puesto) {
-                        $query = DB::select("select sum(total_deuda) deuda
-                            from deudas where id_puesto = ?", [$puesto->id_puesto]);
+                        $query = DB::select('select sum(total_deuda) deuda
+                            from deudas where id_puesto = ?', [$puesto->id_puesto]);
                         $deudaSum = collect($query)->first();
                         $deuda_total = $deudaSum->deuda ? $deudaSum->deuda : 0;
 
-                        $query = DB::select("select sum(importe) pago from detalle_pagos
-                            where id_puesto = ?", [$puesto->id_puesto]);
+                        $query = DB::select('select sum(importe) pago from detalle_pagos
+                            where id_puesto = ?', [$puesto->id_puesto]);
                         $pago = collect($query)->first();
                         $pago_total = $pago->pago ? $pago->pago : 0;
                         $deudaTotal = $deuda_total - $pago_total;
 
-                        if((float)$deudaTotal > 0) {
-                            $deuda += (float)$deudaTotal;
+                        if ((float) $deudaTotal > 0) {
+                            $deuda += (float) $deudaTotal;
                         }
                     }
-                    
-                    if($deuda > 0) {
-                        $deuda = number_format($deuda, 2, '.', "");
+
+                    if ($deuda > 0) {
+                        $deuda = number_format($deuda, 2, '.', '');
                     }
                 }
 
                 return [
                     'id_socio' => $socio->id_socio,
+                    'id_usuario' => $socio->id_usuario,
+                    'usuario' => $socio->usuario ? [
+                        'id_usuario' => $socio->usuario->id_usuario,
+                        'nombre_usuario' => $socio->usuario->nombre_usuario,
+                        'id_rol' => $socio->usuario->id_rol,
+                        'estado' => $socio->usuario->estado,
+                        'debe_cambiar_password' => $socio->usuario->debe_cambiar_password,
+                        'bloqueado' => $socio->usuario->bloqueado,
+                    ] : null,
                     'nombre_completo' => $socio->persona ? $socio->persona->nombre_completo : 'no',
                     'nombre_socio' => $socio->persona ? $socio->persona->nombre : 'no',
                     'apellido_paterno' => $socio->persona ? $socio->persona->apellido_paterno : 'no',
@@ -69,7 +78,7 @@ class SocioCollection extends ResourceCollection
                             'nombre_inquilino' => $puesto->inquilino ? $puesto->inquilino->nombre.' '.$puesto->inquilino->apellido_paterno.' '.$puesto->inquilino->apellido_materno : 'No asignado',
                         ];
                     }),
-                    'estado' =>  $socio->usuario ? $socio->usuario->estado : ($socio->estado ?? '1'),
+                    'estado' => $socio->usuario ? $socio->usuario->estado : ($socio->estado ?? '1'),
                     'fecha_registro' => $socio->fecha_registro ? $socio->fecha_registro : null,
                     'deuda' => $deuda,
                 ];
