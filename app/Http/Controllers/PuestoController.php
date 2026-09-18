@@ -75,12 +75,11 @@ class PuestoController extends Controller
         return response()->json($puestos);
     }
 
-    public function seleccionarPuesto()
-    {
-        $puestos = Puesto::select('id_puesto', 'numero_puesto')->get();
-
-        return response()->json($puestos);
-    }
+    // public function seleccionarPuesto()
+    // {
+    //     $puestos = Puesto::select('id_puesto', 'numero_puesto')->get();
+    //     return response()->json($puestos);
+    // }
 
     public function obtenerTotalPuestos()
     {

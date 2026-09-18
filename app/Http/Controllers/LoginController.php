@@ -32,11 +32,11 @@ class LoginController extends Controller
             }
 
             if ($usuario->bloqueado) {
-                return response()->json(['message' => 'Su cuenta está bloqueada. Contacte al administrador.'], 403);
+                return response()->json(['message' => 'Acceso bloqueado'], 403);
             }
 
             if ($usuario->estado !== '1') {
-                return response()->json(['message' => 'Su cuenta está desactivada. Contacte al administrador.'], 403);
+                return response()->json(['message' => 'Acceso desactivado'], 403);
             }
 
             $usuario->token = $this->apiToken();

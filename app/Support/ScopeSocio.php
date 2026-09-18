@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Puesto;
+use App\Models\Socio;
 use App\Models\Usuario;
 use App\Services\UsuarioService;
 use Illuminate\Http\Request;
@@ -33,12 +34,17 @@ trait ScopeSocio
     protected function idSocioAutenticado(Request $request): ?int
     {
         $usuario = $this->usuarioAutenticado($request);
-
-        if (! $usuario || ! $usuario->Socio) {
+        if (! $usuario) {
             return null;
         }
-
-        return (int) $usuario->Socio->id_socio;
+        if ($usuario->Socio) {
+            return (int) $usuario->Socio->id_socio;
+        }
+        $socio = Socio::where('id_socio', $usuario->id_persona)->first();
+        if ($socio) {
+            return (int) $socio->id_socio;
+        }
+        return null;
     }
 
     /**
