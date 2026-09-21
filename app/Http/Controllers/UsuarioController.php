@@ -238,6 +238,37 @@ class UsuarioController extends Controller
         ], 200);
     }
 
+
+    public function actualizarTelefono(Request $request, $id_usuario)
+    {
+        $usuario = $this->buscarUsuario($id_usuario);
+        if (! $usuario) {
+            return response()->json(['error' => 'El usuario no existe.'], 400);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'telefono' => 'required|string|digits:9',
+        ], [
+            'telefono.required' => 'El campo teléfono es obligatorio.',
+            'telefono.digits' => 'El campo teléfono debe tener 9 dígitos.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 400);
+        }
+
+        try {
+            $persona = $this->usuarioService->actualizarTelefono($usuario, $request->input('telefono'));
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
+
+        return response()->json([
+            'message' => 'Teléfono actualizado correctamente.',
+            'telefono' => $persona->telefono,
+        ], 200);
+    }
+
     /**
      * Estadísticas para el módulo Usuarios y Roles.
      */

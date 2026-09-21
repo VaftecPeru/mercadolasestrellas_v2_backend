@@ -150,6 +150,7 @@ Route::group(['prefix' => 'v1'], function () {
             Route::post('/usuarios/{id_usuario}/bloquear', [UsuarioController::class, 'bloquear']);
             Route::post('/usuarios/{id_usuario}/desbloquear', [UsuarioController::class, 'desbloquear']);
             Route::post('/usuarios/{id_usuario}/generar-password-temporal', [UsuarioController::class, 'generarPasswordTemporal']);
+            Route::put('/usuarios/{id_usuario}/telefono', [UsuarioController::class, 'actualizarTelefono']);
             Route::get('/roles', [UsuarioController::class, 'indexRol']);
             Route::get('/modulos', [UsuarioController::class, 'indexModulo']);
             Route::get('/roles/{id_rol}/modulos', [UsuarioController::class, 'modulosRol']);

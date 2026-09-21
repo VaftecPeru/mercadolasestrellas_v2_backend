@@ -36,10 +36,7 @@ class UsuarioService
     /**
      * Crea (si no existe) la cuenta de usuario asociada a un socio.
      *
-     * Idempotente: si el socio ya tiene usuario, no crea duplicados.
-     * Se espera que el llamador envuelva la operación en una transacción
-     * cuando combine esta acción con la creación del socio/persona.
-     *
+
      * @return array{usuario: Usuario, password_temporal: string|null, creado: bool}
      */
     public function generarCuentaSocio(Socio $socio): array
@@ -203,6 +200,25 @@ class UsuarioService
 
             return $usuario;
         });
+    }
+
+
+    public function actualizarTelefono(Usuario $usuario, string $telefono): Persona
+    {
+        $persona = $usuario->id_persona ? Persona::find($usuario->id_persona) : null;
+
+        if (! $persona && $usuario->Socio) {
+            $persona = $usuario->Socio->persona;
+        }
+
+        if (! $persona) {
+            throw new \InvalidArgumentException('El usuario no tiene datos personales asociados.');
+        }
+
+        $persona->telefono = $telefono;
+        $persona->save();
+
+        return $persona;
     }
 
     /**
