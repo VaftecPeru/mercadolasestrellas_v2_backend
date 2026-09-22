@@ -169,7 +169,7 @@ class DeudaController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            return response()->json(['error' => 'Error al registrar la multa: '.$e->getMessage()], 500);
+            return response()->json(['error' => 'Error al registrar la multa.'], 500);
         }
     }
 }

@@ -6,20 +6,20 @@ use App\Exports\CuotaExport;
 use App\Exports\PDF\CuotaPDFExport;
 use App\Http\Resources\CuotaCollection;
 use App\Models\Cuota;
-use App\Models\Deuda;
-use App\Models\Socio;
 use App\Models\CuotaServicios;
+use App\Models\DetallePagos;
+use App\Models\Deuda;
 use App\Models\DeudaCuota;
 use App\Models\Puesto;
-use App\Models\Servicio;
-use App\Models\DetallePagos;
 use App\Models\PuestoCuota;
-use Illuminate\Http\Request;
-use Maatwebsite\Excel\Facades\Excel;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\DB;
+use App\Models\Servicio;
+use App\Models\Socio;
 use App\Util\Util;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
 
 class CuotaController extends Controller
 {
@@ -30,7 +30,7 @@ class CuotaController extends Controller
 
         $validator = Validator::make($request->all(), [
             'anio' => 'nullable|digits:4',
-            'mes' => 'nullable|digits:1,2',  
+            'mes' => 'nullable|digits:1,2',
         ]);
 
         if ($validator->fails()) {
@@ -55,7 +55,7 @@ class CuotaController extends Controller
         $validator = Validator::make($request->all(), [
             'fecha_emision' => 'required|date',
             'fecha_vencimiento' => 'required|date',
-            'servicios' => 'required|array|min:1'
+            'servicios' => 'required|array|min:1',
         ]);
 
         if ($validator->fails()) {
@@ -82,7 +82,7 @@ class CuotaController extends Controller
 
         DB::beginTransaction();
 
-        $cuota = new Cuota();
+        $cuota = new Cuota;
         $cuota->fecha_emision = $request->fecha_emision;
         $cuota->fecha_vencimiento = $request->fecha_vencimiento;
         $cuota->global = true;
@@ -92,7 +92,7 @@ class CuotaController extends Controller
         // Crear cuota_servicios
         $cuotaServicios = [];
         foreach ($servicios as $servicio) {
-            $cuota_servicio = new CuotaServicios();
+            $cuota_servicio = new CuotaServicios;
             $cuota_servicio->id_cuota = $cuota->id_cuota;
             $cuota_servicio->id_servicio = $servicio->id_servicio;
             $cuota_servicio->importe = $servicio->costo_unitario;  // Usar costo base
@@ -102,7 +102,7 @@ class CuotaController extends Controller
 
         // Crear deudas y deuda_cuotas por cada socio
         foreach ($listado as $socio) {
-            $deuda = new Deuda();
+            $deuda = new Deuda;
             $deuda->id_socio = $socio->id_socio;
             $deuda->id_puesto = $socio->id_puesto;
             $deuda->id_cuota = $cuota->id_cuota;
@@ -120,7 +120,7 @@ class CuotaController extends Controller
                 $deuda->increment('total_deuda', $costo_servicio);
 
                 // Usar el cuota_servicio ya creado
-                $deuda_cuota = new DeudaCuota();
+                $deuda_cuota = new DeudaCuota;
                 $deuda_cuota->id_deuda = $deuda->id_deuda;
                 $deuda_cuota->id_cuota_servicio = $cuotaServicios[$servicio->id_servicio]->id_cuota_servicio;
                 $deuda_cuota->monto = $costo_servicio;
@@ -141,7 +141,7 @@ class CuotaController extends Controller
             'fecha_emision' => 'required|date',
             'fecha_vencimiento' => 'required|date',
             'id_puesto' => 'required|integer',
-            'servicios' => 'required|array|min:1'
+            'servicios' => 'required|array|min:1',
         ]);
 
         if ($validator->fails()) {
@@ -149,12 +149,12 @@ class CuotaController extends Controller
         }
 
         $puesto = Puesto::find($request->id_puesto);
-        if (!$puesto || $puesto->estado == 0 || !$puesto->id_socio) {
+        if (! $puesto || $puesto->estado == 0 || ! $puesto->id_socio) {
             return response()->json(['error' => 'Puesto no válido o sin socio asignado.'], 400);
         }
 
         $socio = Socio::find($puesto->id_socio);
-        if (!$socio) {
+        if (! $socio) {
             return response()->json(['error' => 'Socio no encontrado.'], 400);
         }
 
@@ -168,7 +168,7 @@ class CuotaController extends Controller
 
         DB::beginTransaction();
 
-        $cuota = new Cuota();
+        $cuota = new Cuota;
         $cuota->fecha_emision = $request->fecha_emision;
         $cuota->fecha_vencimiento = $request->fecha_vencimiento;
         $cuota->global = false;
@@ -176,13 +176,13 @@ class CuotaController extends Controller
         $cuota->save();
 
         // Crear relación en puesto_cuotas
-        $puesto_cuota = new PuestoCuota();
+        $puesto_cuota = new PuestoCuota;
         $puesto_cuota->id_puesto = $puesto->id_puesto;
         $puesto_cuota->id_cuota = $cuota->id_cuota;
         $puesto_cuota->estado = 1;
         $puesto_cuota->save();
 
-        $deuda = new Deuda();
+        $deuda = new Deuda;
         $deuda->id_socio = $socio->id_socio;
         $deuda->id_puesto = $puesto->id_puesto;
         $deuda->id_cuota = $cuota->id_cuota;
@@ -195,7 +195,7 @@ class CuotaController extends Controller
                 ? $servicio->costo_unitario * $socio->area
                 : $servicio->costo_unitario;
 
-            $cuota_servicio = new CuotaServicios();
+            $cuota_servicio = new CuotaServicios;
             $cuota_servicio->id_cuota = $cuota->id_cuota;
             $cuota_servicio->id_servicio = $servicio->id_servicio;
             $cuota_servicio->importe = $costo_servicio;
@@ -204,7 +204,7 @@ class CuotaController extends Controller
             $cuota->increment('importe', $costo_servicio);
             $deuda->increment('total_deuda', $costo_servicio);
 
-            $deuda_cuota = new DeudaCuota();
+            $deuda_cuota = new DeudaCuota;
             $deuda_cuota->id_deuda = $deuda->id_deuda;
             $deuda_cuota->id_cuota_servicio = $cuota_servicio->id_cuota_servicio;
             $deuda_cuota->monto = $costo_servicio;
@@ -220,12 +220,12 @@ class CuotaController extends Controller
 
     public function export()
     {
-        return Excel::download(new CuotaExport(), 'cuotas.xlsx');
+        return Excel::download(new CuotaExport, 'cuotas.xlsx');
     }
 
     public function exportPDF()
     {
-        return (new CuotaPDFExport())->generatePDF();
+        return (new CuotaPDFExport)->generatePDF();
     }
 
     public function storePorMultiplesPuestos(Request $request)
@@ -235,7 +235,7 @@ class CuotaController extends Controller
             'fecha_vencimiento' => 'required|date',
             'puestos' => 'required|array|min:1',
             'puestos.*' => 'required|integer|exists:puestos,id_puesto',
-            'servicios' => 'required|array|min:1'
+            'servicios' => 'required|array|min:1',
         ]);
 
         if ($validator->fails()) {
@@ -261,7 +261,7 @@ class CuotaController extends Controller
         DB::beginTransaction();
 
         try {
-            $cuota = new Cuota();
+            $cuota = new Cuota;
             $cuota->fecha_emision = $request->fecha_emision;
             $cuota->fecha_vencimiento = $request->fecha_vencimiento;
             $cuota->global = false;
@@ -271,7 +271,7 @@ class CuotaController extends Controller
             // Crear cuota_servicios
             $cuotaServicios = [];
             foreach ($servicios as $servicio) {
-                $cuota_servicio = new CuotaServicios();
+                $cuota_servicio = new CuotaServicios;
                 $cuota_servicio->id_cuota = $cuota->id_cuota;
                 $cuota_servicio->id_servicio = $servicio->id_servicio;
                 $cuota_servicio->importe = $servicio->costo_unitario;
@@ -281,7 +281,7 @@ class CuotaController extends Controller
 
             // Crear relaciones en puesto_cuotas
             foreach ($puestos as $puesto) {
-                $puesto_cuota = new PuestoCuota();
+                $puesto_cuota = new PuestoCuota;
                 $puesto_cuota->id_puesto = $puesto->id_puesto;
                 $puesto_cuota->id_cuota = $cuota->id_cuota;
                 $puesto_cuota->estado = 1;
@@ -290,11 +290,11 @@ class CuotaController extends Controller
 
             // Crear deudas por cada puesto
             foreach ($puestos as $puesto) {
-                if (!$puesto->id_socio) {
+                if (! $puesto->id_socio) {
                     continue;
                 }
 
-                $deuda = new Deuda();
+                $deuda = new Deuda;
                 $deuda->id_socio = $puesto->id_socio;
                 $deuda->id_puesto = $puesto->id_puesto;
                 $deuda->id_cuota = $cuota->id_cuota;
@@ -310,7 +310,7 @@ class CuotaController extends Controller
                     $cuota->increment('importe', $costo_servicio);
                     $deuda->increment('total_deuda', $costo_servicio);
 
-                    $deuda_cuota = new DeudaCuota();
+                    $deuda_cuota = new DeudaCuota;
                     $deuda_cuota->id_deuda = $deuda->id_deuda;
                     $deuda_cuota->id_cuota_servicio = $cuotaServicios[$servicio->id_servicio]->id_cuota_servicio;
                     $deuda_cuota->monto = $costo_servicio;
@@ -321,10 +321,12 @@ class CuotaController extends Controller
             }
 
             DB::commit();
-            return response()->json(['data' => $cuota, 'message' => 'Cuota creada correctamente para ' . $puestos->count() . ' puestos']);
+
+            return response()->json(['data' => $cuota, 'message' => 'Cuota creada correctamente para '.$puestos->count().' puestos']);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Error al crear la cuota: ' . $e->getMessage()], 500);
+
+            return response()->json(['error' => 'Error al crear la cuota.'], 500);
         }
     }
 
@@ -347,10 +349,12 @@ class CuotaController extends Controller
             $cuota->save();
 
             DB::commit();
+
             return response()->json(['data' => $cuota, 'message' => 'La cuota fue actualizada correctamente']);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Ocurrió un error al intentar actualizar la cuota: ' . $e->getMessage()], 500);
+
+            return response()->json(['error' => 'Error al actualizar la cuota.'], 500);
         }
     }
 
@@ -388,10 +392,12 @@ class CuotaController extends Controller
             $cuota->delete();
 
             DB::commit();
+
             return response()->json(['message' => 'La cuota ha sido eliminada correctamente'], 200);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Ocurrió un error al intentar eliminar la cuota: ' . $e->getMessage()], 500);
+
+            return response()->json(['error' => 'Error al eliminar la cuota.'], 500);
         }
     }
 }

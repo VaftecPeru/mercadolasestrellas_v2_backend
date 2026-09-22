@@ -16,11 +16,11 @@ use App\Http\Resources\ReporteCuotaPorMetroCollection;
 use App\Http\Resources\ReporteCuotaPorPuestoCollection;
 use App\Http\Resources\ReporteDeudaCollection;
 use App\Http\Resources\ReportePagoCollection;
-use App\Models\DetallePagos;
 use App\Models\Deuda;
 use App\Models\Pago;
 use App\Support\Comprobante;
 use App\Support\FiltroTexto;
+use App\Support\ReporteResumen;
 use App\Support\ScopeSocio;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -166,21 +166,7 @@ class ReporteController extends Controller
     {
         $per_page = $request->get('per_page', 15);
 
-        $paginate = DetallePagos::select(
-            'b.serie',
-            'b.numero_pago',
-            DB::raw("concat(b.serie, '-', b.numero_pago) as serie_numero"),
-            DB::raw('b.total_pago as importe_ingreso'),
-            DB::raw('sum(case when c.tipo_servicio = 1 then detalle_pagos.importe else 0 end) as importe_gastos_administrativo'),
-            DB::raw('0 as importe_multas_inasistencia'),
-            DB::raw('0 as importe_pagos_transferencia'),
-            DB::raw('sum(case when c.tipo_servicio = 2 then detalle_pagos.importe else 0 end) as importe_cuotas_extraordinarias'),
-            DB::raw('b.total_pago as importe_total')
-        )
-            ->join('pagos as b', 'detalle_pagos.id_pago', 'b.id_pago')
-            ->join('servicios as c', 'detalle_pagos.id_servicio', 'c.id_servicio')
-            ->where('detalle_pagos.id_puesto', $request->id_puesto)
-            ->groupBy('b.total_pago', 'b.serie', 'b.numero_pago', 'b.id_pago'); // Agregado id_pago para estabilidad
+        $paginate = ReporteResumen::query($request->id_puesto);
 
         $paginado = $paginate->paginate($per_page);
 

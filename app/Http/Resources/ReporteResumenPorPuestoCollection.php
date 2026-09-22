@@ -18,13 +18,15 @@ class ReporteResumenPorPuestoCollection extends ResourceCollection
             'data' => $this->collection->transform(function ($detallePagos) {
 
                 return [
-                    'serie_numero' => $detallePagos->pago ? Comprobante::formatear($detallePagos->pago->serie, $detallePagos->pago->numero_pago) : '-',
-                    'importe_ingreso' => $detallePagos->importe,
-                    'importe_gastos_administrativo' => 0,
-                    'importe_multas_inasistencia' => 0,
-                    'importe_pagos_transferencia' => 0,
-                    'importe_cuotas_extraordinarias' => 0,
-                    'importe_total' => $detallePagos->importe,
+                    'serie_numero' => $detallePagos->serie_numero ?? ($detallePagos->pago ? Comprobante::formatear($detallePagos->pago->serie, $detallePagos->pago->numero_pago) : '-'),
+                    'importe_ingreso' => $detallePagos->importe_ingreso ?? $detallePagos->importe,
+                    'importe_gastos_administrativo' => $detallePagos->importe_gastos_administrativo ?? 0,
+                    'importe_otros_servicios' => $detallePagos->importe_otros_servicios ?? 0,
+                    'importe_multas_inasistencia' => $detallePagos->importe_multas_inasistencia ?? 0,
+                    'importe_pagos_banco' => $detallePagos->importe_pagos_banco ?? 0,
+                    'importe_pagos_efectivo' => $detallePagos->importe_pagos_efectivo ?? 0,
+                    'importe_cuotas_extraordinarias' => $detallePagos->importe_cuotas_extraordinarias ?? 0,
+                    'importe_total' => $detallePagos->importe_total ?? $detallePagos->importe,
                 ];
             }),
             'links' => [

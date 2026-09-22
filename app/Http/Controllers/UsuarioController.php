@@ -84,7 +84,7 @@ class UsuarioController extends Controller
         try {
             $resultado = $this->usuarioService->crearUsuario($request->all());
         } catch (\InvalidArgumentException $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
+            return response()->json(['error' => 'Error al crear usuario.'], 400);
         }
 
         return response()->json([
@@ -145,7 +145,7 @@ class UsuarioController extends Controller
         try {
             $usuario = $this->usuarioService->actualizarUsuario($usuario, $request->all());
         } catch (\InvalidArgumentException $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
+            return response()->json(['error' => 'Error al actualizar usuario.'], 400);
         }
 
         return response()->json([
@@ -238,7 +238,6 @@ class UsuarioController extends Controller
         ], 200);
     }
 
-
     public function actualizarTelefono(Request $request, $id_usuario)
     {
         $usuario = $this->buscarUsuario($id_usuario);
@@ -260,7 +259,7 @@ class UsuarioController extends Controller
         try {
             $persona = $this->usuarioService->actualizarTelefono($usuario, $request->input('telefono'));
         } catch (\InvalidArgumentException $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
+            return response()->json(['error' => 'Error al actualizar teléfono.'], 400);
         }
 
         return response()->json([

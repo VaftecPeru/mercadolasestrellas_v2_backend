@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id('id_servicio');
             $table->string('nombre');
             $table->decimal('costo_unitario', 10, 2);
+            // 1 = Ordinario (Pagos Fijos) ; 2 = Extraordinario (Pagos Extras) ; 3 = Metrado (Pago por área) ; 4 = Cuota Extraordinaria
             $table->integer('tipo_servicio');
             $table->boolean('activo')->default(1); // 0: Inactivo, 1: Activo
             $table->dateTime('fecha_registro')->useCurrent();

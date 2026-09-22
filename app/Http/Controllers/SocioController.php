@@ -311,7 +311,7 @@ class SocioController extends Controller
 
             return response()->json(['message' => $mensaje, 'data' => $resultado], 200);
         } catch (\InvalidArgumentException $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
+            return response()->json(['error' => 'Error al procesar la solicitud.'], 400);
         }
     }
 
@@ -332,7 +332,7 @@ class SocioController extends Controller
                 'password_temporal' => $resultado['password_temporal'],
             ], 200);
         } catch (\InvalidArgumentException $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
+            return response()->json(['error' => 'Error al regenerar credenciales.'], 400);
         }
     }
 

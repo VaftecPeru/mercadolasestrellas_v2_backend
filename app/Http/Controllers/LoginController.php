@@ -50,13 +50,11 @@ class LoginController extends Controller
             ], 200);
         } catch (\Illuminate\Database\QueryException $e) {
             return response()->json([
-                'message' => 'Error de conexión con la base de datos. Verifique su archivo .env',
-                'debug' => $e->getMessage(),
+                'message' => 'Error de conexión con la base de datos.',
             ], 500);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Ocurrió un error inesperado en el servidor.',
-                'debug' => $e->getMessage(),
             ], 500);
         }
     }

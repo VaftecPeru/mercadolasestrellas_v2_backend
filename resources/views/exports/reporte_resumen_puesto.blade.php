@@ -63,8 +63,10 @@
         <th>N° Recibo</th>
         <th>Imp. Ingreso</th>
         <th>Imp. Gastos Administrativos</th>
+        <th>Imp. Otros Servicios</th>
         <th>Imp. Multas Inasistencia</th>
-        <th>Imp. Pagos transferencia</th>
+        <th>Imp. Banco</th>
+        <th>Imp. Efectivo</th>
         <th>Imp. Cuotas Extraordinarias</th>
       </tr>
     </thead>
@@ -74,8 +76,10 @@
           <td class="right">{{ $pago['numero_pago'] }}</td>
           <td class="right">S/ {{ number_format($pago['importe_ingreso'], 2) }}</td>
           <td class="right">S/ {{ number_format($pago['importe_gastos_administrativo'], 2) }}</td>
+          <td class="right">S/ {{ number_format($pago['importe_otros_servicios'], 2) }}</td>
           <td class="right">S/ {{ number_format($pago['importe_multas_inasistencia'], 2) }}</td>
-          <td class="right">S/ {{ number_format($pago['importe_pagos_transferencia'], 2) }}</td>
+          <td class="right">S/ {{ number_format($pago['importe_pagos_banco'], 2) }}</td>
+          <td class="right">S/ {{ number_format($pago['importe_pagos_efectivo'], 2) }}</td>
           <td class="right">S/ {{ number_format($pago['importe_cuotas_extraordinarias'], 2) }}</td>
         </tr>
       @endforeach
@@ -85,8 +89,10 @@
         <th colspan="1" class="right">Total (S/.)</th>
         <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_ingreso, 2) }}</th>
         <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_gastos_administrativo, 2) }}</th>
+        <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_otros_servicios, 2) }}</th>
         <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_multas_inasistencia, 2) }}</th>
-        <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_pagos_transferencia, 2) }}</th>
+        <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_pagos_banco, 2) }}</th>
+        <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_pagos_efectivo, 2) }}</th>
         <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_cuotas_extraordinarias, 2) }}</th>
       </tr>
     </tfoot>

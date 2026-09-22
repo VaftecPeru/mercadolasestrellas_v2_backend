@@ -250,7 +250,7 @@ class PagoSheetImport implements ToCollection
 
                 } catch (\Exception $e) {
                     DB::rollBack();
-                    $this->parent->addError('Fila '.($i + 1)." ({$servicio_excel}): ".$e->getMessage());
+                    $this->parent->addError('Fila '.($i + 1)." ({$servicio_excel}): Error en el proceso de importación.");
                 }
             }
 
@@ -543,7 +543,7 @@ class PagoSheetImport implements ToCollection
 
             } catch (\Exception $e) {
                 DB::rollBack();
-                $this->parent->addError("Hoja {$sheetYear}, Fila ".($i + 1)." ({$servicio_excel}): ".$e->getMessage());
+                $this->parent->addError("Hoja {$sheetYear}, Fila ".($i + 1)." ({$servicio_excel}): Error en el proceso de importación.");
             }
         }
     }

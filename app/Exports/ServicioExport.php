@@ -20,7 +20,7 @@ class ServicioExport implements FromCollection, WithHeadings, WithStyles
                 'id' => $servicio->id_servicio ?? '------',
                 'nombre' => $servicio->nombre ?? '------',
                 'costo_unitario' => $servicio->costo_unitario ?? '------',
-                'tipo_servicio' => $servicio->tipo_servicio === 3 ? 'Servicio por metros cuadrados' : ($servicio->tipo_servicio === 2 ? 'Extraordinario' : 'Ordinario'),
+                'tipo_servicio' => $servicio->tipo_servicio === 4 ? 'Cuota Extraordinaria' : ($servicio->tipo_servicio === 3 ? 'Servicio por metros cuadrados' : ($servicio->tipo_servicio === 2 ? 'Extraordinario' : 'Ordinario')),
                 'fecha_registro' => $servicio->fecha_registro ? \Carbon\Carbon::parse($servicio->fecha_registro)->format('Y-m-d') : '------',
             ];
         });

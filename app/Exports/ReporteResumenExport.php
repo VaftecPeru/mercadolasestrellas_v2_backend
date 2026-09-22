@@ -2,9 +2,9 @@
 
 namespace App\Exports;
 
-use App\Models\DetallePagos;
 use App\Models\Puesto;
 use App\Support\Comprobante;
+use App\Support\ReporteResumen;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithEvents;
@@ -50,19 +50,18 @@ class ReporteResumenExport implements FromCollection, WithColumnFormatting, With
 
     public function collection()
     {
-        $detalles = DetallePagos::with([
-            'pago',
-        ])
-            ->where('id_puesto', $this->filtro_id)
+        $detalles = ReporteResumen::query($this->filtro_id)
             ->get()
-            ->map(function ($detallePagos) {
+            ->map(function ($row) {
                 return [
-                    'serie_numero' => $detallePagos->pago ? Comprobante::formatear($detallePagos->pago->serie ?? '', $detallePagos->pago->numero_pago ?? '') : '-',
-                    'importe_ingreso' => $detallePagos->importe,
-                    'importe_gastos_administrativo' => 0,
-                    'importe_multas_inasistencia' => 0,
-                    'importe_pagos_transferencia' => 0,
-                    'importe_cuotas_extraordinarias' => 0,
+                    'serie_numero' => Comprobante::formatear($row->serie, $row->numero_pago),
+                    'importe_ingreso' => $row->importe_ingreso,
+                    'importe_gastos_administrativo' => $row->importe_gastos_administrativo,
+                    'importe_otros_servicios' => $row->importe_otros_servicios,
+                    'importe_multas_inasistencia' => $row->importe_multas_inasistencia,
+                    'importe_pagos_banco' => $row->importe_pagos_banco,
+                    'importe_pagos_efectivo' => $row->importe_pagos_efectivo,
+                    'importe_cuotas_extraordinarias' => $row->importe_cuotas_extraordinarias,
                 ];
             });
 
@@ -77,8 +76,10 @@ class ReporteResumenExport implements FromCollection, WithColumnFormatting, With
             'N° Recibo',
             'Imp. Ingreso',
             'Imp. Gastos Administrativo',
+            'Imp. Otros Servicios',
             'Imp. Multas Inasistencia',
-            'Imp. Pagos Transferencia',
+            'Imp. Banco',
+            'Imp. Efectivo',
             'Imp. Cuotas Extraordinarias',
         ];
     }
@@ -91,6 +92,8 @@ class ReporteResumenExport implements FromCollection, WithColumnFormatting, With
             'D' => NumberFormat::FORMAT_NUMBER_00,
             'E' => NumberFormat::FORMAT_NUMBER_00,
             'F' => NumberFormat::FORMAT_NUMBER_00,
+            'G' => NumberFormat::FORMAT_NUMBER_00,
+            'H' => NumberFormat::FORMAT_NUMBER_00,
         ];
     }
 
@@ -98,7 +101,7 @@ class ReporteResumenExport implements FromCollection, WithColumnFormatting, With
     {
         $sheet->getStyle(1)->getFont()->setBold(true);
 
-        foreach (range('A', 'F') as $column) {
+        foreach (range('A', 'H') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
     }
@@ -122,12 +125,14 @@ class ReporteResumenExport implements FromCollection, WithColumnFormatting, With
                     $lastRow = $event->sheet->getHighestRow() + 1;
                     $event->sheet->setCellValue('A'.($lastRow), 'Total (S/.)');
                     $event->sheet->getStyle("A{$lastRow}")->getAlignment()->setHorizontal('right');
-                    $event->sheet->getStyle("A{$lastRow}:F{$lastRow}")->getFont()->setBold(true);
+                    $event->sheet->getStyle("A{$lastRow}:H{$lastRow}")->getFont()->setBold(true);
                     $event->sheet->setCellValue('B'.($lastRow), '=SUM(B4:B'.($lastRow - 1).')');
                     $event->sheet->setCellValue('C'.($lastRow), '=SUM(C4:C'.($lastRow - 1).')');
                     $event->sheet->setCellValue('D'.($lastRow), '=SUM(D4:D'.($lastRow - 1).')');
                     $event->sheet->setCellValue('E'.($lastRow), '=SUM(E4:E'.($lastRow - 1).')');
                     $event->sheet->setCellValue('F'.($lastRow), '=SUM(F4:F'.($lastRow - 1).')');
+                    $event->sheet->setCellValue('G'.($lastRow), '=SUM(G4:G'.($lastRow - 1).')');
+                    $event->sheet->setCellValue('H'.($lastRow), '=SUM(H4:H'.($lastRow - 1).')');
                 }
             },
         ];
