@@ -73,6 +73,7 @@ class SocioCollection extends ResourceCollection
                         return [
                             'id_puesto' => $puesto->id_puesto,
                             'numero_puesto' => $puesto->numero_puesto,
+                            'activo' => $puesto->activo,
                             'block' => $puesto->block,
                             'gironegocio' => $puesto->gironegocio,
                             'nombre_inquilino' => $puesto->inquilino ? $puesto->inquilino->nombre.' '.$puesto->inquilino->apellido_paterno.' '.$puesto->inquilino->apellido_materno : 'No asignado',
