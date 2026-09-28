@@ -42,6 +42,13 @@ class PagoController extends Controller
             $paginate->whereRaw('upper(personas.nombre_completo) LIKE upper(?)', ['%'.$texto.'%']);
         }
 
+        // Filtro por puesto (via detalle_pagos)
+        if (isset($request->id_puesto) && $request->id_puesto !== '') {
+            $paginate->whereHas('DetallePagos', function ($q) use ($request) {
+                $q->where('id_puesto', $request->id_puesto);
+            });
+        }
+
         return new PagoCollection($paginate->paginate($per_page));
     }
 
