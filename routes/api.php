@@ -75,6 +75,8 @@ Route::group(['prefix' => 'v1'], function () {
             Route::get('/socios/puestos', [SocioController::class, 'listarPuestos']);
             Route::get('/socios/ver-puestos', [SocioController::class, 'listarPuestos']);
             Route::post('/socios', [SocioController::class, 'store']);
+            Route::post('/socios/{id_socio}/activar', [SocioController::class, 'activar']);
+            Route::post('/socios/{id_socio}/desactivar', [SocioController::class, 'desactivar']);
             Route::post('/socios/{id_socio}/toggle-acceso', [SocioController::class, 'toggleAcceso']);
             Route::post('/socios/{id_socio}/regenerar-credenciales', [SocioController::class, 'regenerarCredenciales']);
             Route::put('/socios/{id_socio}', [SocioController::class, 'update']);

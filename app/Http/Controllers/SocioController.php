@@ -30,8 +30,11 @@ class SocioController extends Controller
             $per_page = $request->per_page;
         }
 
-        $listado = Socio::with(['Persona', 'Usuario', 'Puestos.Block', 'Puestos.Gironegocio', 'Puestos.Inquilino'])
-            ->where('socios.estado', '1');
+        $listado = Socio::with(['Persona', 'Usuario', 'Puestos.Block', 'Puestos.Gironegocio', 'Puestos.Inquilino']);
+
+        if ($request->filled('estado') && $request->estado !== 'todos') {
+            $listado->where('socios.estado', $request->estado);
+        }
 
         if ($this->esSocio($request)) {
             $idSocio = $this->idSocioAutenticado($request);
@@ -62,8 +65,7 @@ class SocioController extends Controller
 
     public function seleccionarSocio(Request $request)
     {
-        $query = Socio::join('personas as c', 'socios.id_socio', 'c.id_persona')
-            ->where('socios.estado', '1');
+        $query = Socio::join('personas as c', 'socios.id_socio', 'c.id_persona');
 
         if ($this->esSocio($request)) {
             $idSocio = $this->idSocioAutenticado($request);
@@ -334,6 +336,60 @@ class SocioController extends Controller
         } catch (\InvalidArgumentException $e) {
             return response()->json(['error' => 'Error al regenerar credenciales.'], 400);
         }
+    }
+
+    public function activar(Request $request, $id_socio)
+    {
+        $socio = Socio::find($id_socio);
+
+        if (! $socio) {
+            return response()->json(['error' => 'El socio no existe.'], 400);
+        }
+
+        $socio->estado = '1';
+        $socio->save();
+
+        if ($socio->persona) {
+            $socio->persona->estado = '1';
+            $socio->persona->save();
+        }
+
+        if ($socio->usuario) {
+            $socio->usuario->estado = '1';
+            $socio->usuario->save();
+        }
+
+        return response()->json([
+            'message' => 'El socio fue activado correctamente.',
+            'data' => $socio,
+        ], 200);
+    }
+
+    public function desactivar(Request $request, $id_socio)
+    {
+        $socio = Socio::find($id_socio);
+
+        if (! $socio) {
+            return response()->json(['error' => 'El socio no existe.'], 400);
+        }
+
+        $socio->estado = '0';
+        $socio->save();
+
+        if ($socio->persona) {
+            $socio->persona->estado = '0';
+            $socio->persona->save();
+        }
+
+        if ($socio->usuario) {
+            $socio->usuario->estado = '0';
+            $socio->usuario->save();
+        }
+
+        return response()->json([
+            'message' => 'El socio fue desactivado correctamente.',
+            'data' => $socio,
+        ], 200);
     }
 
     public function export()
