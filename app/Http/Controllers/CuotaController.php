@@ -14,6 +14,7 @@ use App\Models\Puesto;
 use App\Models\PuestoCuota;
 use App\Models\Servicio;
 use App\Models\Socio;
+use App\Support\FiltroTexto;
 use App\Util\Util;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -31,10 +32,11 @@ class CuotaController extends Controller
         $validator = Validator::make($request->all(), [
             'anio' => 'nullable|digits:4',
             'mes' => 'nullable|digits:1,2',
+            'tipo_servicio' => 'nullable|in:1,2,3,4',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['error' => 'Parámetros "anio" o "mes" inválidos. Formato esperado: anio=YYYY, mes=M o MM'], 400);
+            return response()->json(['error' => $validator->errors()->first()], 400);
         }
 
         // Aplicar filtro de año
@@ -45,6 +47,22 @@ class CuotaController extends Controller
         // Aplicar filtro de mes
         if ($request->filled('mes') && $request->mes !== '' && $request->mes !== null) {
             $query->whereRaw(Util::compareDateMonth('fecha_emision', $request->mes));
+        }
+
+        // Aplicar filtro por nombre de servicio
+        $nombreServicio = $request->get('nombre_servicio', $request->get('buscar_texto'));
+        if (! empty($nombreServicio)) {
+            $texto = FiltroTexto::normalizarNombre($nombreServicio);
+            $query->whereHas('cuotaServicios.servicio', function ($q) use ($texto) {
+                $q->whereRaw('upper(nombre) LIKE upper( ? )', ['%'.$texto.'%']);
+            });
+        }
+
+        // Aplicar filtro por tipo de servicio
+        if ($request->filled('tipo_servicio') && $request->tipo_servicio !== '') {
+            $query->whereHas('cuotaServicios.servicio', function ($q) use ($request) {
+                $q->where('tipo_servicio', $request->tipo_servicio);
+            });
         }
 
         return new CuotaCollection($query->paginate($per_page));
