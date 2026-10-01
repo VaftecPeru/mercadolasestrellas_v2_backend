@@ -16,11 +16,16 @@ class ServicioController extends Controller
     {
         $paginate = Servicio::select('servicios.*')->where('servicios.activo', true);
 
-        if (isset($request->buscar_texto)) {
+        if (isset($request->buscar_texto) && $request->buscar_texto !== '') {
             $texto = strtr(utf8_decode($request->buscar_texto), utf8_decode('àáâãäçèéêëìíîïñòóôõöùúûüýÿÀÁÂÃÄÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ'), 'aaaaaceeeeiiiinooooouuuuyyAAAAACEEEEIIIINOOOOOUUUUY');
             $texto = strtr(utf8_decode($texto), utf8_decode('àáâãäçèéêëìíîïññòóôõöùúûüýÿÀÁÂÃÄÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ'), 'aaaaaceeeeiiiin?ooooouuuuyyAAAAACEEEEIIIINOOOOOUUUUY');
             $texto = str_replace(' ', '%', $texto);
             $paginate->whereRaw("upper(nombre) LIKE upper( ? )", ['%'.$texto.'%']);
+        }
+
+        // Filtro por tipo de servicio
+        if (isset($request->tipo_servicio) && $request->tipo_servicio !== '') {
+            $paginate->where('tipo_servicio', $request->tipo_servicio);
         }
 
         $per_page = 15;

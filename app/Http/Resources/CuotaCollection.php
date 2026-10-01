@@ -31,11 +31,12 @@ class CuotaCollection extends ResourceCollection
                         //         'numero' => $puesto->puesto->numero_puesto,
                         //     ];
                         // }),
-                        'puestos_asignados' => $cuota->global ? null : CuotaServicios::select('puestos.*')
+                        'puestos_asignados' => $cuota->global ? null : CuotaServicios::select('puestos.id_puesto', 'puestos.numero_puesto')
                             ->join('deuda_cuotas','cuota_servicios.id_cuota_servicio','deuda_cuotas.id_cuota_servicio')
                             ->join('deudas','deuda_cuotas.id_deuda','deudas.id_deuda')
                             ->join('puestos','deudas.id_puesto','puestos.id_puesto')
                             ->where('cuota_servicios.id_cuota',$cuota->id_cuota)
+                            ->groupBy('puestos.id_puesto', 'puestos.numero_puesto')  
                             ->get()->map(function ($puesto) {
                                 return [
                                     'id_puesto' => $puesto->id_puesto,

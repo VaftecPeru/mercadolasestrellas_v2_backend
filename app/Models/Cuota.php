@@ -16,7 +16,7 @@ class Cuota extends Model
     protected $fillable = [
         'importe',
         'fecha_vencimiento',
-        'fecha_registro',
+        'fecha_emision',
         'global',
     ];
 

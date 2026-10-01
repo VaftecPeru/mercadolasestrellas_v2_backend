@@ -4,20 +4,25 @@ namespace App\Http\Controllers;
 
 use App\Exports\PDF\SociosPDFExport;
 use App\Exports\SociosExport;
-use App\Models\Socio;
 use App\Http\Resources\SocioCollection;
-use App\Models\Puesto;
-use App\Models\Usuario;
 use App\Models\Persona;
+use App\Models\Puesto;
+use App\Models\Socio;
+use App\Models\Usuario;
+use App\Services\UsuarioService;
+use App\Support\ScopeSocio;
+use App\Support\Texto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
-use Carbon\Carbon;
 
 class SocioController extends Controller
 {
+    use ScopeSocio;
+
+    public function __construct(private UsuarioService $usuarioService) {}
+
     public function index(Request $request)
     {
         $per_page = 16;
@@ -25,37 +30,60 @@ class SocioController extends Controller
             $per_page = $request->per_page;
         }
 
-        $listado = Socio::select('socios.*','d.numero_puesto','d.id_puesto')
-            ->join('usuarios as b','socios.id_socio','b.id_usuario')
-            ->join('personas as c','socios.id_socio','c.id_persona')
-            ->leftJoin('puestos as d','socios.id_socio','d.id_socio')
-            ->where('b.estado', '1');
+        $listado = Socio::with(['Persona', 'Usuario', 'Puestos.Block', 'Puestos.Gironegocio', 'Puestos.Inquilino']);
+
+        if ($request->filled('estado') && $request->estado !== 'todos') {
+            $listado->where('socios.estado', $request->estado);
+        }
+
+        if ($this->esSocio($request)) {
+            $idSocio = $this->idSocioAutenticado($request);
+            if ($idSocio !== null) {
+                $listado->where('socios.id_socio', $idSocio);
+            }
+        }
 
         if (isset($request->nombre_socio)) {
             $texto = strtr(utf8_decode($request->nombre_socio), utf8_decode('àáâãäçèéêëìíîïñòóôõöùúûüýÿÀÁÂÃÄÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ'), 'aaaaaceeeeiiiinooooouuuuyyAAAAACEEEEIIIINOOOOOUUUUY');
             $texto = strtr(utf8_decode($texto), utf8_decode('àáâãäçèéêëìíîïññòóôõöùúûüýÿÀÁÂÃÄÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ'), 'aaaaaceeeeiiiin?ooooouuuuyyAAAAACEEEEIIIINOOOOOUUUUY');
             $texto = str_replace(' ', '%', $texto);
-            $listado->whereRaw("upper(concat(c.nombre_completo)) LIKE upper( ? )", ['%'.$texto.'%']);
+            $listado->whereHas('persona', function ($query) use ($texto) {
+                $query->whereRaw('upper(nombre_completo) LIKE upper( ? )', ['%'.$texto.'%']);
+            });
         }
 
         if (isset($request->numero_puesto)) {
-            $listado->whereRaw("upper(d.numero_puesto) LIKE upper( ? )", ['%'.$request->numero_puesto.'%']);
+            $listado->whereHas('puestos', function ($query) use ($request) {
+                $query->whereRaw('upper(numero_puesto) LIKE upper( ? )', ['%'.$request->numero_puesto.'%']);
+            });
         }
 
-        $listado->orderBy('numero_puesto', 'asc');
+        $listado->orderByNombreCompleto();
 
         return new SocioCollection($listado->paginate($per_page));
     }
 
-    public function seleccionarSocio()
+    public function seleccionarSocio(Request $request)
     {
-        $socios = Socio::join('usuarios', 'socios.id_socio', 'usuarios.id_usuario')
-            ->join('personas as c','socios.id_socio','c.id_persona')
-            ->where('usuarios.estado', '1')
-            ->select('socios.id_socio', 'c.nombre_completo', 'c.dni')
-            ->get();
-        
-        return response()->json(["data" => $socios]);
+        $query = Socio::join('personas as c', 'socios.id_socio', 'c.id_persona');
+
+        if ($this->esSocio($request)) {
+            $idSocio = $this->idSocioAutenticado($request);
+            if ($idSocio !== null) {
+                $query->where('socios.id_socio', $idSocio);
+            }
+        }
+
+        $socios = $query
+            ->select('socios.id_socio', 'c.nombre_completo', 'c.dni', 'c.telefono', 'c.correo')
+            ->get()
+            ->map(function ($socio) {
+                $socio->nombre_completo = Texto::capitalizarNombre($socio->nombre_completo);
+
+                return $socio;
+            });
+
+        return response()->json(['data' => $socios]);
     }
 
     public function listarPuestos(Request $request)
@@ -67,13 +95,13 @@ class SocioController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(["error" => $validator->errors()->first()], 400);
+            return response()->json(['error' => $validator->errors()->first()], 400);
         }
 
         $puestos = Puesto::where('id_socio', $request->input('id_socio'))
             ->get(['id_puesto', 'numero_puesto']);
 
-        return response()->json(["data"=>$puestos]);
+        return response()->json(['data' => $puestos]);
     }
 
     public function store(Request $request)
@@ -101,76 +129,71 @@ class SocioController extends Controller
             'fecha_registro.required' => 'El campo fecha de registro es obligatorio',
             'sexo.required' => 'El campo sexo es obligatorio',
             'telefono.required' => 'El campo telefono es obligatorio',
-            'telefono.digits' => 'El campo telefono debe tener 9 digitos'
+            'telefono.digits' => 'El campo telefono debe tener 9 digitos',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(["error" => $validator->errors()->first()], 400);
+            return response()->json(['error' => $validator->errors()->first()], 400);
         }
 
         $persona = Persona::where('dni', $request->input('dni'))->first();
         if ($persona) {
-            return response()->json(["error" => "El dni ya esta registrado. ".$persona->nombre_completo], 400);
+            return response()->json(['error' => 'El dni ya esta registrado. '.$persona->nombre_completo], 400);
         }
 
         $nombre_completo = $request->input('nombre').' '.$request->input('apellido_paterno').' '.$request->input('apellido_materno');
-        // Registro de Persona
-        $persona = new Persona();
-        // $persona->id_socio = $usuario->id_usuario;
-        // $persona->id_usuario = $usuario->id_usuario;
-        $persona->nombre = $request->input('nombre');
-        $persona->apellido_paterno = $request->input('apellido_paterno');
-        $persona->apellido_materno = $request->input('apellido_materno');
-        $persona->dni = $request->input('dni');
-        $persona->correo = $request->input('correo');
-        $persona->telefono = $request->input('telefono');
-        $persona->direccion = $request->input('direccion');
-        $persona->sexo = $request->input('sexo');
-        $persona->estado = $request->input('estado');
-        // $persona->fecha_registro = Carbon::now();
-        $persona->fecha_registro = $request->input('fecha_registro');
-        $persona->nombre_completo = $nombre_completo;
-        $persona->save();
 
-        // Registro de usuario
-        $usuario = new Usuario();
-        $usuario->id_usuario = $persona->id_persona;
-        $usuario->rol = 'Socio';
-        $usuario->nombre_usuario = $nombre_completo;
+        // Registro transaccional de Persona + Socio + Usuario (rollback ante cualquier fallo)
+        $resultado = DB::transaction(function () use ($request, $nombre_completo) {
+            // Registro de Persona
+            $persona = new Persona;
+            $persona->nombre = $request->input('nombre');
+            $persona->apellido_paterno = $request->input('apellido_paterno');
+            $persona->apellido_materno = $request->input('apellido_materno');
+            $persona->dni = $request->input('dni');
+            $persona->correo = $request->input('correo');
+            $persona->telefono = $request->input('telefono');
+            $persona->direccion = $request->input('direccion');
+            $persona->sexo = $request->input('sexo');
+            $persona->estado = $request->input('estado');
+            $persona->fecha_registro = $request->input('fecha_registro');
+            $persona->nombre_completo = $nombre_completo;
+            $persona->save();
 
-        // La contraseña por defecto es el dni encriptado
-        $contrasenia = $request->input('dni');
-        $usuario->contrasenia = Hash::make($contrasenia);
+            // Registro de socio (solo ID, fecha y estado - los datos personales vienen de Persona)
+            $socio = new Socio;
+            $socio->id_socio = $persona->id_persona;
+            $socio->fecha_registro = $request->input('fecha_registro');
+            $socio->estado = $request->input('estado');
+            $socio->save();
 
-        $usuario->estado = $request->input('estado');
-        $usuario->fecha_registro = $request->input('fecha_registro');
-        $usuario->save();
+            // Creación de la cuenta de acceso del socio
+            $cuenta = $this->usuarioService->generarCuentaSocio($socio);
 
-        // Registro de socio
-        $socio = new Socio();
-        $socio->id_socio = $persona->id_persona;
-        $socio->id_usuario = $persona->id_persona;
-        $socio->nombres = $request->input('nombre');
-        $socio->apellido_paterno = $request->input('apellido_paterno');
-        $socio->apellido_materno = $request->input('apellido_materno');
-        $socio->dni = $request->input('dni');
-        $socio->correo = $request->input('correo');
-        $socio->telefono = $request->input('telefono');
-        $socio->direccion = $request->input('direccion');
-        $socio->sexo = $request->input('sexo');
-        $socio->save();
+            return ['socio' => $socio, 'cuenta' => $cuenta];
+        });
+
+        $socio = $resultado['socio'];
+        $cuenta = $resultado['cuenta'];
 
         // Se asigna el puesto al socio
-        if ($request->input('id_puesto') == null) {
-            return response()->json(["data"=>$socio, "message"=>"Socio registrado correctamente"]);
+        if ($request->input('id_puesto') != null) {
+            $puesto = Puesto::where('id_puesto', $request->input('id_puesto'))->first();
+            $puesto->id_socio = $socio->id_socio;
+            $puesto->estado = 2;
+            $puesto->update();
         }
 
-        $puesto = Puesto::where('id_puesto', $request->input('id_puesto'))->first();
-        $puesto->id_socio = $socio->id_socio;
-        $puesto->estado = 2;
-        $puesto->update();
+        $data = ['data' => $socio, 'message' => 'Socio registrado correctamente'];
 
-        return response()->json(["data"=>$socio, "message"=>"Socio registrado correctamente"]);
+        if ($cuenta['creado']) {
+            $data['acceso'] = [
+                'nombre_usuario' => $cuenta['usuario']->nombre_usuario,
+                'password_temporal' => $cuenta['password_temporal'],
+            ];
+        }
+
+        return response()->json($data);
     }
 
     public function update(Request $request, $id_socio)
@@ -202,13 +225,13 @@ class SocioController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(["error" => $validator->errors()->first()], 400);
+            return response()->json(['error' => $validator->errors()->first()], 400);
         }
 
         $persona = Persona::where('dni', $request->input('dni'))
             ->where('id_persona', '!=', $id_socio)->first();
         if ($persona) {
-            return response()->json(["error" => "El dni ya esta registrado. ".$persona->nombre_completo], 400);
+            return response()->json(['error' => 'El dni ya esta registrado. '.$persona->nombre_completo], 400);
         }
 
         $nombre_completo = $request->input('nombre').' '.$request->input('apellido_paterno').' '.$request->input('apellido_materno');
@@ -228,26 +251,21 @@ class SocioController extends Controller
         $persona->nombre_completo = $nombre_completo;
         $persona->update();
 
-        // Actualizar datos del socio
+        // Actualizar estado del socio (los datos personales ya están en persona)
         $socio = Socio::where('id_socio', $id_socio)->first();
-        $socio->nombres = $request->input('nombre');
-        $socio->apellido_paterno = $request->input('apellido_paterno');
-        $socio->apellido_materno = $request->input('apellido_materno');
-        $socio->correo = $request->input('correo');
-        $socio->direccion = $request->input('direccion');
-        $socio->dni = $request->input('dni');
+        $socio->estado = $request->input('estado');
         $socio->fecha_registro = $request->input('fecha_registro');
-        $socio->sexo = $request->input('sexo');
-        $socio->telefono = $request->input('telefono');
         $socio->update();
 
-        // Actualizar datos de usuario
+        // Actualizar datos de usuario (si existe)
         $usuario = Usuario::where('id_usuario', $socio->id_usuario)->first();
-        $usuario->nombre_usuario = $nombre_completo;
-        $usuario->estado = $request->input('estado');
-        $usuario->update();
+        if ($usuario) {
+            $usuario->nombre_usuario = $request->input('dni');
+            $usuario->estado = $request->input('estado');
+            $usuario->update();
+        }
 
-        return response()->json(["data"=>$socio, "message"=>"Los datos del socio fueron actualizados correctamente"]);
+        return response()->json(['data' => $socio, 'message' => 'Los datos del socio fueron actualizados correctamente']);
     }
 
     public function destroy($id_socio)
@@ -256,7 +274,7 @@ class SocioController extends Controller
         $socio = Socio::find($id_socio);
 
         // Verificamos si el socio existe
-        if(!$socio){
+        if (! $socio) {
             return response()->json(['error' => 'El socio no existe.'], 400);
         }
 
@@ -268,22 +286,121 @@ class SocioController extends Controller
             $puesto->update();
         }
 
-        // Desactivamos al usuario
+        // Desactivamos al usuario (si existe)
         $usuario = Usuario::where('id_usuario', $socio->id_usuario)->first();
-        $usuario->estado = 0;
-        $usuario->update();
+        if ($usuario) {
+            $usuario->estado = 0;
+            $usuario->update();
+        }
 
-        return response()->json(["message"=>"El socio fue eliminado correctamente"]);
+        return response()->json(['message' => 'El socio fue eliminado correctamente']);
+    }
+
+    public function toggleAcceso(Request $request, $id_socio)
+    {
+        $socio = Socio::find($id_socio);
+
+        if (! $socio) {
+            return response()->json(['error' => 'El socio no existe.'], 400);
+        }
+
+        try {
+            $resultado = $this->usuarioService->toggleAcceso($socio);
+
+            $mensaje = $resultado['habilitado']
+                ? 'El acceso del socio fue habilitado.'
+                : 'El acceso del socio fue deshabilitado.';
+
+            return response()->json(['message' => $mensaje, 'data' => $resultado], 200);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['error' => 'Error al procesar la solicitud.'], 400);
+        }
+    }
+
+    public function regenerarCredenciales(Request $request, $id_socio)
+    {
+        $socio = Socio::find($id_socio);
+
+        if (! $socio) {
+            return response()->json(['error' => 'El socio no existe.'], 400);
+        }
+
+        try {
+            $resultado = $this->usuarioService->regenerarCredenciales($socio);
+
+            return response()->json([
+                'message' => 'Credenciales regeneradas correctamente.',
+                'nombre_usuario' => $resultado['usuario']->nombre_usuario,
+                'password_temporal' => $resultado['password_temporal'],
+            ], 200);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['error' => 'Error al regenerar credenciales.'], 400);
+        }
+    }
+
+    public function activar(Request $request, $id_socio)
+    {
+        $socio = Socio::find($id_socio);
+
+        if (! $socio) {
+            return response()->json(['error' => 'El socio no existe.'], 400);
+        }
+
+        $socio->estado = '1';
+        $socio->save();
+
+        if ($socio->persona) {
+            $socio->persona->estado = '1';
+            $socio->persona->save();
+        }
+
+        if ($socio->usuario) {
+            $socio->usuario->estado = '1';
+            $socio->usuario->save();
+        }
+
+        return response()->json([
+            'message' => 'El socio fue activado correctamente.',
+            'data' => $socio,
+        ], 200);
+    }
+
+    public function desactivar(Request $request, $id_socio)
+    {
+        $socio = Socio::find($id_socio);
+
+        if (! $socio) {
+            return response()->json(['error' => 'El socio no existe.'], 400);
+        }
+
+        $socio->estado = '0';
+        $socio->save();
+
+        if ($socio->persona) {
+            $socio->persona->estado = '0';
+            $socio->persona->save();
+        }
+
+        if ($socio->usuario) {
+            $socio->usuario->estado = '0';
+            $socio->usuario->save();
+        }
+
+        return response()->json([
+            'message' => 'El socio fue desactivado correctamente.',
+            'data' => $socio,
+        ], 200);
     }
 
     public function export()
     {
-        return Excel::download(new SociosExport(), 'socios.xlsx');
+        return Excel::download(new SociosExport, 'socios.xlsx');
     }
 
     public function exportPDF()
     {
-        $export = new SociosPDFExport();
+        $export = new SociosPDFExport;
+
         return $export->generatePDF();
     }
 }
