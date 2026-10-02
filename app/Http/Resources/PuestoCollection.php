@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class PuestoCollection extends ResourceCollection
@@ -16,9 +15,10 @@ class PuestoCollection extends ResourceCollection
     {
         return [
             'data' => $this->collection->transform(function ($puesto) {
-                
+
                 return [
                     'id_puesto' => $puesto->id_puesto,
+                    'id_socio' => $puesto->id_socio,
                     'numero_puesto' => $puesto->numero_puesto,
                     'area' => $puesto->area,
                     'estado' => $puesto->estado,
