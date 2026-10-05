@@ -34,7 +34,7 @@ class FinancialIntegrityGuardTest extends TestCase
             $source
         );
         $this->assertStringContainsString(
-            "DetallePagos::where('id_deuda_cuota', $idDeudaCuota)",
+            'DetallePagos::where(\'id_deuda_cuota\', $idDeudaCuota)',
             $source
         );
         $this->assertStringContainsString(
