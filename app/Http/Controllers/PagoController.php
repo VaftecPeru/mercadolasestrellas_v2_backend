@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exports\PagosExport;
+use App\Models\BancoCuenta;
 use App\Exports\PDF\PagosPDFExport;
 use App\Http\Resources\PagoCollection;
 use App\Models\CuotaServicios;
@@ -233,6 +234,20 @@ class PagoController extends Controller
             $pago->save();
 
             if ($datosBanco !== null) {
+                $cuentaBancoValida = BancoCuenta::where(
+                    'id_bancocuenta',
+                    $datosBanco['id_bancocuenta']
+                )
+                    ->where('id_banco', $datosBanco['id_banco'])
+                    ->where('estado', '1')
+                    ->exists();
+
+                if (! $cuentaBancoValida) {
+                    throw new \InvalidArgumentException(
+                        'La cuenta bancaria seleccionada no pertenece al banco indicado o está inactiva.'
+                    );
+                }
+
                 $pagoBanco = new PagoBanco;
                 $pagoBanco->id_pagobanco = $pago->id_pago;
                 $pagoBanco->id_banco = $datosBanco['id_banco'];
