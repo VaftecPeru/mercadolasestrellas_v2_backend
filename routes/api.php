@@ -37,17 +37,18 @@ Route::group(['prefix' => 'v1'], function () {
     Route::middleware('auth.token')->group(function () {
         Route::get('/blocks', [BlockController::class, 'index']);
         Route::get('/giro-negocios', [GiroNegocioController::class, 'index']);
-        Route::get('/inquilinos', [InquilinoController::class, 'index']);
+        // Datos operativos sensibles: solo módulos que realmente los utilizan.
+        Route::get('/inquilinos', [InquilinoController::class, 'index'])->middleware('permiso:4');
 
-        Route::get('/setup/bancos', [SetupController::class, 'indexBanco']);
-        Route::get('/setup/banco-cuentas', [SetupController::class, 'indexBancoCuenta']);
+        Route::get('/setup/bancos', [SetupController::class, 'indexBanco'])->middleware('permiso:7');
+        Route::get('/setup/banco-cuentas', [SetupController::class, 'indexBancoCuenta'])->middleware('permiso:7');
         Route::get('/setup/modulos-web', [SetupController::class, 'indexModuloWeb']);
 
         Route::get('/puestos/seleccionar', [PuestoController::class, 'seleccionarPuesto']);
         Route::get('/socios/seleccionar', [SocioController::class, 'seleccionarSocio']);
         Route::get('/puestos', [PuestoController::class, 'index']);
-        Route::get('/puestos/sin-socio', [PuestoController::class, 'puestosSinSocio']);
-        Route::get('/puestos/sin-inquilino', [PuestoController::class, 'puestosSinInquilino']);
+        Route::get('/puestos/sin-socio', [PuestoController::class, 'puestosSinSocio'])->middleware('permiso:4');
+        Route::get('/puestos/sin-inquilino', [PuestoController::class, 'puestosSinInquilino'])->middleware('permiso:4');
 
         Route::get('/servicios/multa-inasistencia', [ServicioController::class, 'consultarImporteMultaInasistencia']);
         Route::get('/servicios/consultar-importe-multa-inasistencia', [ServicioController::class, 'consultarImporteMultaInasistencia']);
