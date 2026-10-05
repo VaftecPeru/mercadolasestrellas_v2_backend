@@ -3,13 +3,12 @@
 namespace Tests\Feature;
 
 use Illuminate\Support\Facades\Route;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class LeastPrivilegeRouteTest extends TestCase
 {
-    /**
-     * @dataProvider restrictedOperationalRoutes
-     */
+    #[DataProvider('restrictedOperationalRoutes')]
     public function test_operational_routes_require_their_module_permission(
         string $uri,
         string $permission

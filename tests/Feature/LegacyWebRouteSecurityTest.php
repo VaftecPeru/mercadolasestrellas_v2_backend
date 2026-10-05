@@ -3,13 +3,12 @@
 namespace Tests\Feature;
 
 use Illuminate\Support\Facades\Route;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class LegacyWebRouteSecurityTest extends TestCase
 {
-    /**
-     * @dataProvider protectedLegacyRoutes
-     */
+    #[DataProvider('protectedLegacyRoutes')]
     public function test_legacy_data_routes_are_authenticated_and_authorized(
         string $uri,
         string $permission
