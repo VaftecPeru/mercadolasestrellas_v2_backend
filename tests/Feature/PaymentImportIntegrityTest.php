@@ -71,11 +71,11 @@ class PaymentImportIntegrityTest extends TestCase
             substr_count($source, '->lockForUpdate()')
         );
         $this->assertStringContainsString(
-            "Puesto::where('numero_puesto', $nro_puesto)",
+            'Puesto::where(\'numero_puesto\', $nro_puesto)',
             $source
         );
         $this->assertStringContainsString(
-            "Puesto::where('id_puesto', $puestoObj->id_puesto)",
+            'Puesto::where(\'id_puesto\', $puestoObj->id_puesto)',
             $source
         );
     }
