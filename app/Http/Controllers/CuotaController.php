@@ -167,13 +167,13 @@ class CuotaController extends Controller
         }
 
         $puesto = Puesto::find($request->id_puesto);
-        if (! $puesto || $puesto->estado == 0 || ! $puesto->id_socio) {
-            return response()->json(['error' => 'Puesto no válido o sin socio asignado.'], 400);
+        if (! $puesto || ! $puesto->activo || ! $puesto->id_socio) {
+            return response()->json(['error' => 'Puesto no válido, inactivo o sin socio asignado.'], 400);
         }
 
         $socio = Socio::find($puesto->id_socio);
-        if (! $socio) {
-            return response()->json(['error' => 'Socio no encontrado.'], 400);
+        if (! $socio || (string) $socio->estado !== '1') {
+            return response()->json(['error' => 'Socio no encontrado o inactivo.'], 400);
         }
 
         $servicios = Servicio::whereIn('id_servicio', $request->servicios)
@@ -210,7 +210,7 @@ class CuotaController extends Controller
 
         foreach ($servicios as $servicio) {
             $costo_servicio = $servicio->tipo_servicio == 3
-                ? $servicio->costo_unitario * $socio->area
+                ? $servicio->costo_unitario * $puesto->area
                 : $servicio->costo_unitario;
 
             $cuota_servicio = new CuotaServicios;
@@ -262,6 +262,10 @@ class CuotaController extends Controller
 
         $puestos = Puesto::whereIn('id_puesto', $request->puestos)
             ->where('activo', 1)
+            ->whereNotNull('id_socio')
+            ->whereHas('socio', function ($query) {
+                $query->where('estado', '1');
+            })
             ->get();
 
         if ($puestos->isEmpty()) {
@@ -378,16 +382,19 @@ class CuotaController extends Controller
 
     public function destroy($id)
     {
+        $cuota = Cuota::findOrFail($id);
+
+        // Validar antes de abrir la transacción para no dejarla activa
+        // cuando la cuota no puede eliminarse.
+        $tienePagos = DetallePagos::where('id_cuota', $id)->exists();
+        if ($tienePagos) {
+            return response()->json([
+                'error' => 'No se puede eliminar la cuota porque tiene pagos asociados.',
+            ], 400);
+        }
+
         DB::beginTransaction();
         try {
-            $cuota = Cuota::findOrFail($id);
-
-            // Verificar si hay pagos asociados
-            $tienePagos = DetallePagos::where('id_cuota', $id)->exists();
-            if ($tienePagos) {
-                return response()->json(['error' => 'No se puede eliminar la cuota porque tiene pagos asociados.'], 400);
-            }
-
             // 1. Obtener IDs de deudas relacionadas
             $deudaIds = Deuda::where('id_cuota', $id)->pluck('id_deuda');
 

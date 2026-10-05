@@ -54,306 +54,222 @@ class PagoController extends Controller
 
     public function store(Request $request)
     {
-
         $validator = Validator::make($request->all(), [
-
-            'id_socio' => 'required',
-
+            'id_socio' => 'required|integer',
             'deudas' => 'required|array|min:1',
-
-            'deudas.*.id_deuda_cuota' => 'required',
-
-            'deudas.*.importe' => 'required|numeric|min:0|not_in:0',
-
+            'deudas.*.id_deuda_cuota' => 'required|integer|distinct',
+            'deudas.*.importe' => 'required|numeric|gt:0',
         ], [
-
             'id_socio.required' => 'El id del socio es requerido.',
-
             'deudas.required' => 'No se han seleccionado deudas.',
-
             'deudas.*.id_deuda_cuota.required' => 'No se recibió el id de la deuda.',
-
+            'deudas.*.id_deuda_cuota.distinct' => 'No se puede registrar la misma deuda más de una vez en el pago.',
             'deudas.*.importe.required' => 'No se recibió el importe de la deuda.',
-
-            'deudas.*.importe.not_in' => 'El importe de la deuda no puede ser 0.',
-
+            'deudas.*.importe.gt' => 'El importe de la deuda debe ser mayor a 0.',
         ]);
 
         if ($validator->fails()) {
-
             return response()->json(['error' => $validator->errors()->first()], 400);
-
         }
 
-        $documento = Documento::find(1);
+        try {
+            $pago = $this->registrarPagoTransaccional(
+                (int) $request->input('id_socio'),
+                $request->input('deudas')
+            );
 
-        if (! $documento) {
-
-            return response()->json(['error' => 'No se encontro el documento.'], 400);
-
+            return response()->json([
+                'data' => $pago,
+                'message' => 'El pago fue registrado con exito',
+            ], 200);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => 'Error al registrar el pago.'], 500);
         }
-
-        $no_validos = '';
-
-        foreach ($request->input('deudas') as $deuda_value) {
-
-            $deudaCuota = DeudaCuota::find($deuda_value['id_deuda_cuota']);
-
-            $importe_a_cuenta = DetallePagos::select('detalle_pagos.*')
-
-                ->where('id_deuda_cuota', $deuda_value['id_deuda_cuota'])
-
-                ->sum('importe');
-
-            $importe_a_cuenta = $importe_a_cuenta ?? 0;
-
-            $resto_de_deuda = $deudaCuota->monto - $importe_a_cuenta;
-
-            if (! ($resto_de_deuda >= $deuda_value['importe'])) {
-
-                $no_validos .= '#'.$deuda_value['id_deuda_cuota'].' '.$deuda_value['importe'].' ';
-
-            }
-
-        }
-
-        if ($no_validos != '') {
-
-            return response()->json(['error' => 'No se recibieron deudas válidas ('.$no_validos.').'], 400);
-
-        }
-
-        DB::beginTransaction();
-
-        $numeroDocumentoNuevo = $documento->numero_documento + 1;
-
-        $documento->numero_documento = $numeroDocumentoNuevo;
-
-        $documento->update();
-
-        $numero_pago_nueno = str_pad($numeroDocumentoNuevo, 8, '0', STR_PAD_LEFT);
-
-        $pago = new Pago;
-
-        $pago->id_socio = $request->input('id_socio');
-
-        $pago->id_documento = 1;
-
-        $pago->numero_pago = $numero_pago_nueno;
-
-        $pago->serie = $documento->serie;
-
-        $pago->total_pago = 0;
-
-        $pago->fecha_registro = Carbon::now();
-
-        $pago->save();
-
-        foreach ($request->input('deudas') as $deuda_value) {
-
-            $deudaCuota = DeudaCuota::find($deuda_value['id_deuda_cuota']);
-
-            $deuda = Deuda::find($deudaCuota->id_deuda);
-
-            $cuotaServicios = CuotaServicios::find($deudaCuota->id_cuota_servicio);
-
-            $detallePagos = new DetallePagos;
-
-            $detallePagos->id_pago = $pago->id_pago;
-
-            $detallePagos->id_deuda = $deuda->id_deuda;
-
-            $detallePagos->id_deuda_cuota = $deuda_value['id_deuda_cuota'];
-
-            $detallePagos->id_cuota = $cuotaServicios->id_cuota;
-
-            $detallePagos->id_puesto = $deuda->id_puesto;
-
-            $detallePagos->id_servicio = $cuotaServicios->id_servicio;
-
-            $detallePagos->importe = $deuda_value['importe'];
-
-            $detallePagos->save();
-
-        }
-
-        $sumaImporte = DetallePagos::where('id_pago', $pago->id_pago)->sum('importe');
-
-        $pago->total_pago = $sumaImporte;
-
-        $pago->save();
-
-        DB::commit();
-
-        return response()->json(['data' => $pago, 'message' => 'El pago fue registrado con exito'], 200);
-
     }
 
     public function storePagoPorBanco(Request $request)
     {
-
         $validator = Validator::make($request->all(), [
-
-            'id_socio' => 'required',
-
+            'id_socio' => 'required|integer',
             'id_banco' => 'required',
-
             'id_bancocuenta' => 'required',
-
             'numero_operacion' => 'required',
-
-            'fecha_operacion' => 'required',
-
+            'fecha_operacion' => 'required|date',
             'deudas' => 'required|array|min:1',
-
-            'deudas.*.id_deuda_cuota' => 'required',
-
-            'deudas.*.importe' => 'required|numeric|min:0|not_in:0',
-
+            'deudas.*.id_deuda_cuota' => 'required|integer|distinct',
+            'deudas.*.importe' => 'required|numeric|gt:0',
         ], [
-
             'id_socio.required' => 'El socio es requerido.',
-
             'id_banco.required' => 'El banco es requerido.',
-
-            'id_bancocuenta.required' => 'La cuenta es requerido.',
-
+            'id_bancocuenta.required' => 'La cuenta es requerida.',
             'numero_operacion.required' => 'El número de operación es requerido.',
-
-            'fecha_operacion.required' => 'La fecha de operación es requerido.',
-
+            'fecha_operacion.required' => 'La fecha de operación es requerida.',
             'deudas.required' => 'No se han seleccionado deudas.',
-
             'deudas.*.id_deuda_cuota.required' => 'No se recibió el id de la deuda.',
-
+            'deudas.*.id_deuda_cuota.distinct' => 'No se puede registrar la misma deuda más de una vez en el pago.',
             'deudas.*.importe.required' => 'No se recibió el importe de la deuda.',
-
-            'deudas.*.importe.not_in' => 'El importe de la deuda no puede ser 0.',
-
+            'deudas.*.importe.gt' => 'El importe de la deuda debe ser mayor a 0.',
         ]);
 
         if ($validator->fails()) {
-
             return response()->json(['error' => $validator->errors()->first()], 400);
-
         }
 
-        $documento = Documento::find(1);
+        try {
+            $pago = $this->registrarPagoTransaccional(
+                (int) $request->input('id_socio'),
+                $request->input('deudas'),
+                [
+                    'id_banco' => $request->input('id_banco'),
+                    'id_bancocuenta' => $request->input('id_bancocuenta'),
+                    'numero_operacion' => $request->input('numero_operacion'),
+                    'fecha_operacion' => $request->input('fecha_operacion'),
+                ]
+            );
 
-        if (! $documento) {
-
-            return response()->json(['error' => 'No se encontro el documento.'], 400);
-
+            return response()->json([
+                'data' => $pago,
+                'message' => 'El pago fue registrado con exito',
+            ], 200);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => 'Error al registrar el pago por banco.'], 500);
         }
+    }
 
-        $no_validos = '';
+    /**
+     * Registra un pago de forma atómica y serializa la validación del saldo.
+     * Esto evita pagos cruzados entre socios, deudas duplicadas y sobrepagos
+     * cuando dos operaciones se ejecutan de manera concurrente.
+     */
+    private function registrarPagoTransaccional(
+        int $idSocio,
+        array $deudasSolicitadas,
+        ?array $datosBanco = null
+    ): Pago {
+        return DB::transaction(function () use ($idSocio, $deudasSolicitadas, $datosBanco) {
+            $documento = Documento::where('id_documento', 1)
+                ->lockForUpdate()
+                ->first();
 
-        foreach ($request->input('deudas') as $deuda_value) {
-
-            $deudaCuota = DeudaCuota::find($deuda_value['id_deuda_cuota']);
-
-            $importe_a_cuenta = DetallePagos::select('detalle_pagos.*')
-
-                ->where('id_deuda_cuota', $deuda_value['id_deuda_cuota'])
-
-                ->sum('importe');
-
-            $importe_a_cuenta = $importe_a_cuenta ?? 0;
-
-            $resto_de_deuda = $deudaCuota->monto - $importe_a_cuenta;
-
-            if (! ($resto_de_deuda >= $deuda_value['importe'])) {
-
-                $no_validos .= '#'.$deuda_value['id_deuda_cuota'].' '.$deuda_value['importe'].' ';
-
+            if (! $documento) {
+                throw new \InvalidArgumentException('No se encontro el documento.');
             }
 
-        }
+            $deudasValidadas = [];
 
-        if ($no_validos != '') {
+            foreach ($deudasSolicitadas as $deudaValue) {
+                $idDeudaCuota = (int) $deudaValue['id_deuda_cuota'];
+                $importeSolicitado = round((float) $deudaValue['importe'], 2);
 
-            return response()->json(['error' => 'No se recibieron deudas válidas ('.$no_validos.').'], 400);
+                $deudaCuota = DeudaCuota::where('id_deuda_cuota', $idDeudaCuota)
+                    ->lockForUpdate()
+                    ->first();
 
-        }
+                if (! $deudaCuota) {
+                    throw new \InvalidArgumentException(
+                        'La deuda seleccionada #'.$idDeudaCuota.' no existe.'
+                    );
+                }
 
-        DB::beginTransaction();
+                $deuda = Deuda::find($deudaCuota->id_deuda);
 
-        $numeroDocumentoNuevo = $documento->numero_documento + 1;
+                if (! $deuda || (int) $deuda->id_socio !== $idSocio) {
+                    throw new \InvalidArgumentException(
+                        'Una de las deudas seleccionadas no pertenece al socio indicado.'
+                    );
+                }
 
-        $documento->numero_documento = $numeroDocumentoNuevo;
+                $cuotaServicios = CuotaServicios::find($deudaCuota->id_cuota_servicio);
 
-        $documento->update();
+                if (! $cuotaServicios) {
+                    throw new \InvalidArgumentException(
+                        'La deuda seleccionada no tiene un servicio asociado válido.'
+                    );
+                }
 
-        $numero_pago_nueno = str_pad($numeroDocumentoNuevo, 8, '0', STR_PAD_LEFT);
+                $importePagado = DetallePagos::where('id_deuda_cuota', $idDeudaCuota)
+                    ->lockForUpdate()
+                    ->get(['importe'])
+                    ->sum('importe');
 
-        $pago = new Pago;
+                $saldoPendiente = round(
+                    (float) $deudaCuota->monto - (float) $importePagado,
+                    2
+                );
 
-        $pago->id_socio = $request->input('id_socio');
+                if ($importeSolicitado <= 0 || $importeSolicitado > $saldoPendiente) {
+                    throw new \InvalidArgumentException(
+                        'El importe solicitado supera el saldo pendiente de la deuda #'.$idDeudaCuota.'.'
+                    );
+                }
 
-        $pago->id_documento = 1;
+                $deudasValidadas[] = [
+                    'deuda_cuota' => $deudaCuota,
+                    'deuda' => $deuda,
+                    'cuota_servicio' => $cuotaServicios,
+                    'importe' => $importeSolicitado,
+                ];
+            }
 
-        $pago->numero_pago = $numero_pago_nueno;
+            $documento->numero_documento = (int) $documento->numero_documento + 1;
+            $documento->save();
 
-        $pago->serie = $documento->serie;
+            $pago = new Pago;
+            $pago->id_socio = $idSocio;
+            $pago->id_documento = 1;
+            $pago->numero_pago = str_pad(
+                (string) $documento->numero_documento,
+                8,
+                '0',
+                STR_PAD_LEFT
+            );
+            $pago->serie = $documento->serie;
+            $pago->total_pago = 0;
+            $pago->fecha_registro = Carbon::now();
+            $pago->save();
 
-        $pago->total_pago = 0;
+            if ($datosBanco !== null) {
+                $pagoBanco = new PagoBanco;
+                $pagoBanco->id_pagobanco = $pago->id_pago;
+                $pagoBanco->id_banco = $datosBanco['id_banco'];
+                $pagoBanco->id_bancocuenta = $datosBanco['id_bancocuenta'];
+                $pagoBanco->numero_operacion = $datosBanco['numero_operacion'];
+                $pagoBanco->fecha_operacion = $datosBanco['fecha_operacion'];
+                $pagoBanco->save();
+            }
 
-        $pago->fecha_registro = Carbon::now();
+            $totalPago = 0;
 
-        $pago->save();
+            foreach ($deudasValidadas as $item) {
+                /** @var DeudaCuota $deudaCuota */
+                $deudaCuota = $item['deuda_cuota'];
+                /** @var Deuda $deuda */
+                $deuda = $item['deuda'];
+                /** @var CuotaServicios $cuotaServicios */
+                $cuotaServicios = $item['cuota_servicio'];
 
-        $pagoBanco = new PagoBanco;
+                $detallePagos = new DetallePagos;
+                $detallePagos->id_pago = $pago->id_pago;
+                $detallePagos->id_deuda = $deuda->id_deuda;
+                $detallePagos->id_deuda_cuota = $deudaCuota->id_deuda_cuota;
+                $detallePagos->id_cuota = $cuotaServicios->id_cuota;
+                $detallePagos->id_puesto = $deuda->id_puesto;
+                $detallePagos->id_servicio = $cuotaServicios->id_servicio;
+                $detallePagos->importe = $item['importe'];
+                $detallePagos->save();
 
-        $pagoBanco->id_pagobanco = $pago->id_pago;
+                $totalPago += $item['importe'];
+            }
 
-        $pagoBanco->id_banco = $request->input('id_banco');
+            $pago->total_pago = round($totalPago, 2);
+            $pago->save();
 
-        $pagoBanco->id_bancocuenta = $request->input('id_bancocuenta');
-
-        $pagoBanco->numero_operacion = $request->input('numero_operacion');
-
-        $pagoBanco->fecha_operacion = $request->input('fecha_operacion');
-
-        $pagoBanco->save();
-
-        foreach ($request->input('deudas') as $deuda_value) {
-
-            $deudaCuota = DeudaCuota::find($deuda_value['id_deuda_cuota']);
-
-            $deuda = Deuda::find($deudaCuota->id_deuda);
-
-            $cuotaServicios = CuotaServicios::find($deudaCuota->id_cuota_servicio);
-
-            $detallePagos = new DetallePagos;
-
-            $detallePagos->id_pago = $pago->id_pago;
-
-            $detallePagos->id_deuda = $deuda->id_deuda;
-
-            $detallePagos->id_deuda_cuota = $deuda_value['id_deuda_cuota'];
-
-            $detallePagos->id_cuota = $cuotaServicios->id_cuota;
-
-            $detallePagos->id_puesto = $deuda->id_puesto;
-
-            $detallePagos->id_servicio = $cuotaServicios->id_servicio;
-
-            $detallePagos->importe = $deuda_value['importe'];
-
-            $detallePagos->save();
-
-        }
-
-        $sumaImporte = DetallePagos::where('id_pago', $pago->id_pago)->sum('importe');
-
-        $pago->total_pago = $sumaImporte;
-
-        $pago->save();
-
-        DB::commit();
-
-        return response()->json(['data' => $pago, 'message' => 'El pago fue registrado con exito'], 200);
-
+            return $pago;
+        }, 3);
     }
 
     public function ListaDeudaCuotas($id_puesto)
