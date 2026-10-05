@@ -30,12 +30,6 @@ Route::group(['prefix' => 'v1'], function () {
     Route::post('/cambiar-password', [LoginController::class, 'cambiarPassword']);
     Route::get('/validaciones', [LoginController::class, 'validaciones']);
 
-    // Búsqueda rápida de puesto (público)
-    Route::get('/puestos/seleccionar', [PuestoController::class, 'seleccionarPuesto']);
-    Route::get('/reportes/deudas', [ReporteController::class, 'deudas']);
-    Route::get('/reporte-deudas/exportar', [ReporteController::class, 'exportReporteDeudas']);
-    Route::get('/reporte-deudas/exportar-pdf', [ReporteController::class, 'exportReporteDeudasPDF']);
-
     // ---------------------------------------------------------------------
     // Autenticado (cualquier rol activo) — lookups compartidos y lecturas
     // con scoping para el Socio
@@ -49,6 +43,7 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('/setup/banco-cuentas', [SetupController::class, 'indexBancoCuenta']);
         Route::get('/setup/modulos-web', [SetupController::class, 'indexModuloWeb']);
 
+        Route::get('/puestos/seleccionar', [PuestoController::class, 'seleccionarPuesto']);
         Route::get('/socios/seleccionar', [SocioController::class, 'seleccionarSocio']);
         Route::get('/puestos', [PuestoController::class, 'index']);
         Route::get('/puestos/sin-socio', [PuestoController::class, 'puestosSinSocio']);
@@ -57,14 +52,27 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('/servicios/multa-inasistencia', [ServicioController::class, 'consultarImporteMultaInasistencia']);
         Route::get('/servicios/consultar-importe-multa-inasistencia', [ServicioController::class, 'consultarImporteMultaInasistencia']);
 
-        Route::get('/deudas', [DeudaController::class, 'index']);
-        Route::get('/deudas/pendientes', [DeudaController::class, 'deudaPendientes']);
+        // Deudas necesarias tanto para registrar pagos como para consultar el reporte.
+        Route::get('/deudas', [DeudaController::class, 'index'])->middleware('permiso:7,9');
+        Route::get('/deudas/pendientes', [DeudaController::class, 'deudaPendientes'])->middleware('permiso:7,9');
 
-        Route::get('/reportes/pagos', [ReporteController::class, 'pagos']);
-        Route::get('/reportes/pagos/exportar', [ReporteController::class, 'exportReportePagos']);
-        Route::get('/reportes/pagos/exportar-pdf', [ReporteController::class, 'exportReportePagosPDF']);
-        Route::get('/reportes/deudas/exportar', [ReporteController::class, 'exportReporteDeudas']);
-        Route::get('/reportes/deudas/exportar-pdf', [ReporteController::class, 'exportReporteDeudasPDF']);
+        // Reporte de pagos (módulo 8)
+        Route::middleware('permiso:8')->group(function () {
+            Route::get('/reportes/pagos', [ReporteController::class, 'pagos']);
+            Route::get('/reportes/pagos/exportar', [ReporteController::class, 'exportReportePagos']);
+            Route::get('/reportes/pagos/exportar-pdf', [ReporteController::class, 'exportReportePagosPDF']);
+        });
+
+        // Reporte de deudas (módulo 9)
+        Route::middleware('permiso:9')->group(function () {
+            Route::get('/reportes/deudas', [ReporteController::class, 'deudas']);
+            Route::get('/reportes/deudas/exportar', [ReporteController::class, 'exportReporteDeudas']);
+            Route::get('/reportes/deudas/exportar-pdf', [ReporteController::class, 'exportReporteDeudasPDF']);
+
+            // Alias legado usado por versiones antiguas del frontend.
+            Route::get('/reporte-deudas/exportar', [ReporteController::class, 'exportReporteDeudas']);
+            Route::get('/reporte-deudas/exportar-pdf', [ReporteController::class, 'exportReporteDeudasPDF']);
+        });
 
         // Dashboard (Panel de Control — módulo 1)
         Route::get('/reportes/dashboard', [ReporteController::class, 'dashboard'])->middleware('permiso:1');
