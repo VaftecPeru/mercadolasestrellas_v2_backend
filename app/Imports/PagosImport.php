@@ -2,6 +2,7 @@
 
 namespace App\Imports;
 
+use App\Models\BancoCuenta;
 use App\Models\Cuota;
 use App\Models\CuotaServicios;
 use App\Models\DetallePagos;
@@ -65,6 +66,10 @@ class PagosImport implements SkipsUnknownSheets, WithMultipleSheets
 
 class PagoSheetImport implements ToCollection
 {
+    private const ID_BANCO_IMPORTACION = 1;
+
+    private const ID_CUENTA_IMPORTACION = 3;
+
     protected $parent;
 
     protected $defaultYear;
@@ -114,7 +119,9 @@ class PagoSheetImport implements ToCollection
                     DB::beginTransaction();
 
                     // Find Puesto
-                    $puestoObj = Puesto::where('numero_puesto', $nro_puesto)->first();
+                    $puestoObj = Puesto::where('numero_puesto', $nro_puesto)
+                        ->lockForUpdate()
+                        ->first();
                     if (! $puestoObj) {
                         throw new \Exception("No se encontró el puesto '{$nro_puesto}'.");
                     }
@@ -170,79 +177,13 @@ class PagoSheetImport implements ToCollection
 
                     $id_deuda_cuota = $deudaCuota->id_deuda_cuota;
 
-                    if ($monto_pago > 0.0) {
-                        // Duplicate check
-                        $pagoExistenteQuery = DetallePagos::where('id_deuda_cuota', $id_deuda_cuota)
-                            ->where('importe', $monto_pago);
-
-                        if (! empty($nro_operacion) && $nro_operacion !== '-') {
-                            $pagoExistenteQuery->whereHas('Pago.PagoBanco', function ($q) use ($nro_operacion) {
-                                $q->where('numero_operacion', $nro_operacion);
-                            });
-                        }
-
-                        if ($pagoExistenteQuery->exists()) {
-                            DB::rollBack();
-
-                            continue;
-                        }
-
-                        // Create Payment records
-                        $documento = Documento::find(1);
-                        if (! $documento) {
-                            throw new \Exception('No se encontró el documento de configuración.');
-                        }
-
-                        $numeroDocumentoNuevo = $documento->numero_documento + 1;
-                        $documento->numero_documento = $numeroDocumentoNuevo;
-                        $documento->save();
-
-                        $numero_pago_nuevo = str_pad($numeroDocumentoNuevo, 8, '0', STR_PAD_LEFT);
-
-                        $fecha_pago = Carbon::now();
-                        if ($fecha_pago_raw) {
-                            try {
-                                if (is_numeric($fecha_pago_raw)) {
-                                    $fecha_pago = Carbon::instance(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($fecha_pago_raw));
-                                } else {
-                                    $fecha_pago = Carbon::parse($fecha_pago_raw);
-                                }
-                            } catch (\Exception $e) {
-                            }
-                        }
-
-                        $pago = Pago::create([
-                            'id_socio' => $id_socio,
-                            'id_documento' => 1,
-                            'numero_pago' => $numero_pago_nuevo,
-                            'serie' => $documento->serie,
-                            'total_pago' => $monto_pago,
-                            'fecha_registro' => $fecha_pago,
-                        ]);
-
-                        $deuda = Deuda::find($deudaCuota->id_deuda);
-                        $cuotaServicios = CuotaServicios::find($deudaCuota->id_cuota_servicio);
-
-                        DetallePagos::create([
-                            'id_pago' => $pago->id_pago,
-                            'id_deuda' => $deuda->id_deuda,
-                            'id_deuda_cuota' => $id_deuda_cuota,
-                            'id_cuota' => $cuotaServicios->id_cuota,
-                            'id_puesto' => $deuda->id_puesto,
-                            'id_servicio' => $cuotaServicios->id_servicio,
-                            'importe' => $monto_pago,
-                        ]);
-
-                        if (! empty($nro_operacion) && $nro_operacion !== '-') {
-                            PagoBanco::create([
-                                'id_pagobanco' => $pago->id_pago,
-                                'id_banco' => 1,
-                                'id_bancocuenta' => 3,
-                                'numero_operacion' => $nro_operacion,
-                                'fecha_operacion' => $fecha_pago,
-                            ]);
-                        }
-
+                    if ($monto_pago > 0.0 && $this->registrarPagoImportado(
+                        (int) $id_socio,
+                        $deudaCuota,
+                        (float) $monto_pago,
+                        $nro_operacion,
+                        $fecha_pago_raw
+                    )) {
                         $this->parent->incrementImportedCount();
                     }
 
@@ -438,6 +379,14 @@ class PagoSheetImport implements ToCollection
             try {
                 DB::beginTransaction();
 
+                $puestoObj = Puesto::where('id_puesto', $puestoObj->id_puesto)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $puestoObj) {
+                    throw new \Exception('El puesto dejó de estar disponible durante la importación.');
+                }
+
                 // Buscar el Servicio (limpiando el sufijo de año)
                 $servicioObj = $this->findServicio($servicio_excel);
                 if (! $servicioObj) {
@@ -461,81 +410,13 @@ class PagoSheetImport implements ToCollection
 
                 $id_deuda_cuota = $deudaCuota->id_deuda_cuota;
 
-                if ($monto_pago > 0.0) {
-                    // Verificar pago duplicado
-                    $pagoExistenteQuery = DetallePagos::where('id_deuda_cuota', $id_deuda_cuota)
-                        ->where('importe', $monto_pago);
-
-                    if (! empty($nro_operacion) && $nro_operacion !== '-') {
-                        $pagoExistenteQuery->whereHas('Pago.PagoBanco', function ($q) use ($nro_operacion) {
-                            $q->where('numero_operacion', $nro_operacion);
-                        });
-                    }
-
-                    if ($pagoExistenteQuery->exists()) {
-                        DB::rollBack();
-
-                        continue; // Saltar pago ya importado
-                    }
-
-                    $documento = Documento::find(1);
-                    if (! $documento) {
-                        throw new \Exception('No se encontró el documento de configuración.');
-                    }
-
-                    $numeroDocumentoNuevo = $documento->numero_documento + 1;
-                    $documento->numero_documento = $numeroDocumentoNuevo;
-                    $documento->save();
-
-                    $numero_pago_nuevo = str_pad($numeroDocumentoNuevo, 8, '0', STR_PAD_LEFT);
-
-                    // Parsear fecha
-                    $fecha_pago = Carbon::now();
-                    if ($fecha_pago_raw) {
-                        try {
-                            if (is_numeric($fecha_pago_raw)) {
-                                $fecha_pago = Carbon::instance(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($fecha_pago_raw));
-                            } else {
-                                $fecha_pago = Carbon::parse($fecha_pago_raw);
-                            }
-                        } catch (\Exception $e) {
-                            // fallback
-                        }
-                    }
-
-                    // Crear Pago
-                    $pago = Pago::create([
-                        'id_socio' => $id_socio,
-                        'id_documento' => 1,
-                        'numero_pago' => $numero_pago_nuevo,
-                        'serie' => $documento->serie,
-                        'total_pago' => $monto_pago,
-                        'fecha_registro' => $fecha_pago,
-                    ]);
-
-                    $deuda = Deuda::find($deudaCuota->id_deuda);
-                    $cuotaServicios = CuotaServicios::find($deudaCuota->id_cuota_servicio);
-
-                    DetallePagos::create([
-                        'id_pago' => $pago->id_pago,
-                        'id_deuda' => $deuda->id_deuda,
-                        'id_deuda_cuota' => $id_deuda_cuota,
-                        'id_cuota' => $cuotaServicios->id_cuota,
-                        'id_puesto' => $deuda->id_puesto,
-                        'id_servicio' => $cuotaServicios->id_servicio,
-                        'importe' => $monto_pago,
-                    ]);
-
-                    if (! empty($nro_operacion) && $nro_operacion !== '-') {
-                        PagoBanco::create([
-                            'id_pagobanco' => $pago->id_pago,
-                            'id_banco' => 1, // BCP por defecto
-                            'id_bancocuenta' => 3, // Cuenta por defecto
-                            'numero_operacion' => $nro_operacion,
-                            'fecha_operacion' => $fecha_pago,
-                        ]);
-                    }
-
+                if ($monto_pago > 0.0 && $this->registrarPagoImportado(
+                    (int) $id_socio,
+                    $deudaCuota,
+                    (float) $monto_pago,
+                    $nro_operacion,
+                    $fecha_pago_raw
+                )) {
                     $this->parent->incrementImportedCount();
                 }
 
@@ -545,6 +426,164 @@ class PagoSheetImport implements ToCollection
                 DB::rollBack();
                 $this->parent->addError("Hoja {$sheetYear}, Fila ".($i + 1)." ({$servicio_excel}): Error en el proceso de importación.");
             }
+        }
+    }
+
+    /**
+     * Registra un pago importado con las mismas garantías financieras del flujo
+     * manual: deuda y comprobante bloqueados, pertenencia al socio y saldo vigente.
+     */
+    private function registrarPagoImportado(
+        int $idSocio,
+        DeudaCuota $deudaCuota,
+        float $montoPago,
+        $numeroOperacion,
+        $fechaPagoRaw
+    ): bool {
+        $deudaCuota = DeudaCuota::where(
+            'id_deuda_cuota',
+            $deudaCuota->id_deuda_cuota
+        )
+            ->lockForUpdate()
+            ->first();
+
+        if (! $deudaCuota) {
+            throw new \Exception('La deuda seleccionada dejó de estar disponible.');
+        }
+
+        $deuda = Deuda::find($deudaCuota->id_deuda);
+        if (! $deuda || (int) $deuda->id_socio !== $idSocio) {
+            throw new \Exception(
+                'La deuda encontrada no pertenece al socio indicado por la importación.'
+            );
+        }
+
+        // Mantener idempotencia cuando se vuelve a cargar el mismo archivo.
+        $pagoExistenteQuery = DetallePagos::where(
+            'id_deuda_cuota',
+            $deudaCuota->id_deuda_cuota
+        )->where('importe', $montoPago);
+
+        if (! empty($numeroOperacion) && $numeroOperacion !== '-') {
+            $pagoExistenteQuery->whereHas(
+                'Pago.PagoBanco',
+                function ($query) use ($numeroOperacion) {
+                    $query->where('numero_operacion', $numeroOperacion);
+                }
+            );
+        }
+
+        if ($pagoExistenteQuery->exists()) {
+            return false;
+        }
+
+        $importePagado = DetallePagos::where(
+            'id_deuda_cuota',
+            $deudaCuota->id_deuda_cuota
+        )
+            ->lockForUpdate()
+            ->get(['importe'])
+            ->sum('importe');
+
+        $saldoPendiente = round(
+            (float) $deudaCuota->monto - (float) $importePagado,
+            2
+        );
+        $montoPago = round($montoPago, 2);
+
+        if ($montoPago <= 0 || $montoPago > $saldoPendiente) {
+            throw new \Exception(
+                'El pago importado supera el saldo pendiente de la deuda.'
+            );
+        }
+
+        $documento = Documento::where('id_documento', 1)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $documento) {
+            throw new \Exception('No se encontró el documento de configuración.');
+        }
+
+        $documento->numero_documento = (int) $documento->numero_documento + 1;
+        $documento->save();
+
+        $fechaPago = $this->parseFechaPago($fechaPagoRaw);
+
+        $pago = Pago::create([
+            'id_socio' => $idSocio,
+            'id_documento' => 1,
+            'numero_pago' => str_pad(
+                (string) $documento->numero_documento,
+                8,
+                '0',
+                STR_PAD_LEFT
+            ),
+            'serie' => $documento->serie,
+            'total_pago' => $montoPago,
+            'fecha_registro' => $fechaPago,
+        ]);
+
+        $cuotaServicios = CuotaServicios::find($deudaCuota->id_cuota_servicio);
+        if (! $cuotaServicios) {
+            throw new \Exception('La deuda importada no tiene un servicio válido.');
+        }
+
+        DetallePagos::create([
+            'id_pago' => $pago->id_pago,
+            'id_deuda' => $deuda->id_deuda,
+            'id_deuda_cuota' => $deudaCuota->id_deuda_cuota,
+            'id_cuota' => $cuotaServicios->id_cuota,
+            'id_puesto' => $deuda->id_puesto,
+            'id_servicio' => $cuotaServicios->id_servicio,
+            'importe' => $montoPago,
+        ]);
+
+        if (! empty($numeroOperacion) && $numeroOperacion !== '-') {
+            $cuentaImportacionValida = BancoCuenta::where(
+                'id_bancocuenta',
+                self::ID_CUENTA_IMPORTACION
+            )
+                ->where('id_banco', self::ID_BANCO_IMPORTACION)
+                ->where('estado', '1')
+                ->exists();
+
+            if (! $cuentaImportacionValida) {
+                throw new \Exception(
+                    'La cuenta bancaria configurada para importaciones no es válida.'
+                );
+            }
+
+            PagoBanco::create([
+                'id_pagobanco' => $pago->id_pago,
+                'id_banco' => self::ID_BANCO_IMPORTACION,
+                'id_bancocuenta' => self::ID_CUENTA_IMPORTACION,
+                'numero_operacion' => $numeroOperacion,
+                'fecha_operacion' => $fechaPago,
+            ]);
+        }
+
+        return true;
+    }
+
+    private function parseFechaPago($fechaPagoRaw): Carbon
+    {
+        if (! $fechaPagoRaw) {
+            return Carbon::now();
+        }
+
+        try {
+            if (is_numeric($fechaPagoRaw)) {
+                return Carbon::instance(
+                    \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject(
+                        $fechaPagoRaw
+                    )
+                );
+            }
+
+            return Carbon::parse($fechaPagoRaw);
+        } catch (\Exception $e) {
+            return Carbon::now();
         }
     }
 
