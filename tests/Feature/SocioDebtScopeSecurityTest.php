@@ -70,7 +70,7 @@ class SocioDebtScopeSecurityTest extends TestCase
             $source
         );
         $this->assertStringContainsString(
-            "$query->where('id_socio', $idSocio);",
+            '$query->where(\'id_socio\', $idSocio);',
             $source
         );
     }
