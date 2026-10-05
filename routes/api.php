@@ -52,8 +52,9 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('/servicios/multa-inasistencia', [ServicioController::class, 'consultarImporteMultaInasistencia']);
         Route::get('/servicios/consultar-importe-multa-inasistencia', [ServicioController::class, 'consultarImporteMultaInasistencia']);
 
-        // Deudas necesarias tanto para registrar pagos como para consultar el reporte.
-        Route::get('/deudas', [DeudaController::class, 'index'])->middleware('permiso:7,9');
+        // Listado general de deudas: uso operativo exclusivo del módulo Pagos.
+        // Los reportes del Socio utilizan endpoints específicos con scoping por cuenta autenticada.
+        Route::get('/deudas', [DeudaController::class, 'index'])->middleware('permiso:7');
         Route::get('/deudas/pendientes', [DeudaController::class, 'deudaPendientes'])->middleware('permiso:7,9');
 
         // Reporte de pagos (módulo 8)
