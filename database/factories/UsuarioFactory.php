@@ -17,13 +17,13 @@ class UsuarioFactory extends Factory
     public function definition(): array
     {
         return [
-            //
-            'id_persona'=>$this->faker->id_persona(),
-            'nombre_usuario'=>$this->faker->nombre_usuario(),
-            'contrasenia'=>$this->faker->contrasenia(),
-            'rol'=>$this->faker->rol(),
-            'estado'=>$this->faker->estado(),
-            'fecha_registro'=>$this->faker->fecha_registro(),
+            'nombre_usuario' => $this->faker->unique()->userName(),
+            'contrasenia' => bcrypt('password'),
+            'estado' => '1',
+            'id_rol' => 2,
+            'debe_cambiar_password' => 1,
+            'bloqueado' => 0,
+            'fecha_registro' => now(),
         ];
     }
 }

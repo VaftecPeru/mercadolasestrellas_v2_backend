@@ -29,12 +29,6 @@ class ReporteCuotaPorMetroCollection extends ResourceCollection
                     'fecha' => $deuda->fecha_registro,
                 ];
             }),
-            'links' => [
-                'self' => url('/pagos'),
-            ],
-            'meta' => [
-                'total' => $this->collection->count(),
-            ],
         ];
-        }
+    }
 }

@@ -1,81 +1,58 @@
 <?php
 
-
-
 namespace App\Http\Controllers;
 
-
-
 use App\Exports\PagosExport;
-
 use App\Exports\PDF\PagosPDFExport;
-
-use App\Models\Pago;
-
-use App\Http\Requests\StorePagoRequest;
-
-use App\Http\Requests\UpdatePagoRequest;
-
 use App\Http\Resources\PagoCollection;
-
-use App\Models\PagoBanco;
-
-use App\Models\Cuota;
-
 use App\Models\CuotaServicios;
-
-use App\Models\DeudaCuota;
-
-use App\Models\Puesto;
-
 use App\Models\DetallePagos;
-
 use App\Models\Deuda;
-
+use App\Models\DeudaCuota;
 use App\Models\Documento;
-
+use App\Models\Pago;
+use App\Models\PagoBanco;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
 
-use Illuminate\Support\Facades\DB;
-
-use Carbon\Carbon;
-
-use Illuminate\Support\Facades\Validator;
-
-
-
 class PagoController extends Controller
-
 {
-
-
-
-    public function index()
-
+    public function index(Request $request)
     {
-
         $per_page = 15;
 
         if (isset($request->per_page)) {
-
             $per_page = $request->per_page;
-
         }
 
-        $paginate = Pago::orderBy('fecha_registro', 'desc')->paginate($per_page);
+        $paginate = Pago::with(['socio.persona']) // Cargar relaciones para evitar N+1
+            ->select('pagos.*')
+            ->join('socios', 'pagos.id_socio', 'socios.id_socio')
+            ->join('personas', 'socios.id_socio', 'personas.id_persona')
+            ->orderBy('pagos.fecha_registro', 'desc');
 
+        // Filtro de búsqueda por nombre del socio
+        if (isset($request->search) && ! empty($request->search)) {
+            $texto = strtr(utf8_decode($request->search), utf8_decode('àáâãäçèéêëìíîïñòóôõöùúûüýÿÀÁÂÃÄÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ'), 'aaaaaceeeeiiiinooooouuuuyyAAAAACEEEEIIIINOOOOOUUUUY');
+            $texto = strtr(utf8_decode($texto), utf8_decode('àáâãäçèéêëìíîïññòóôõöùúûüýÿÀÁÂÃÄÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ'), 'aaaaaceeeeiiiin?ooooouuuuyyAAAAACEEEEIIIINOOOOOUUUUY');
+            $texto = str_replace(' ', '%', $texto);
+            $paginate->whereRaw('upper(personas.nombre_completo) LIKE upper(?)', ['%'.$texto.'%']);
+        }
 
+        // Filtro por puesto (via detalle_pagos)
+        if (isset($request->id_puesto) && $request->id_puesto !== '') {
+            $paginate->whereHas('DetallePagos', function ($q) use ($request) {
+                $q->where('id_puesto', $request->id_puesto);
+            });
+        }
 
-        return new PagoCollection($paginate);
-
+        return new PagoCollection($paginate->paginate($per_page));
     }
 
-
-
     public function store(Request $request)
-
     {
 
         $validator = Validator::make($request->all(), [
@@ -102,29 +79,21 @@ class PagoController extends Controller
 
         ]);
 
-
-
         if ($validator->fails()) {
 
             return response()->json(['error' => $validator->errors()->first()], 400);
 
         }
 
-       
-
         $documento = Documento::find(1);
 
-        if (!$documento) {
+        if (! $documento) {
 
             return response()->json(['error' => 'No se encontro el documento.'], 400);
 
         }
 
-
-
-        $no_validos = "";
-
-
+        $no_validos = '';
 
         foreach ($request->input('deudas') as $deuda_value) {
 
@@ -132,35 +101,29 @@ class PagoController extends Controller
 
             $importe_a_cuenta = DetallePagos::select('detalle_pagos.*')
 
-                ->where('id_deuda_cuota',$deuda_value['id_deuda_cuota'])
+                ->where('id_deuda_cuota', $deuda_value['id_deuda_cuota'])
 
-                ->sum("importe");
+                ->sum('importe');
 
             $importe_a_cuenta = $importe_a_cuenta ?? 0;
 
             $resto_de_deuda = $deudaCuota->monto - $importe_a_cuenta;
 
+            if (! ($resto_de_deuda >= $deuda_value['importe'])) {
 
-
-            if(!($resto_de_deuda >= $deuda_value['importe'])){
-
-                $no_validos .= "#".$deuda_value['id_deuda_cuota']." ".$deuda_value['importe']." ";
+                $no_validos .= '#'.$deuda_value['id_deuda_cuota'].' '.$deuda_value['importe'].' ';
 
             }
 
         }
 
-        if($no_validos != ""){
+        if ($no_validos != '') {
 
             return response()->json(['error' => 'No se recibieron deudas válidas ('.$no_validos.').'], 400);
 
         }
 
-
-
         DB::beginTransaction();
-
-
 
         $numeroDocumentoNuevo = $documento->numero_documento + 1;
 
@@ -168,13 +131,9 @@ class PagoController extends Controller
 
         $documento->update();
 
-
-
         $numero_pago_nueno = str_pad($numeroDocumentoNuevo, 8, '0', STR_PAD_LEFT);
 
-
-
-        $pago = new Pago();
+        $pago = new Pago;
 
         $pago->id_socio = $request->input('id_socio');
 
@@ -190,8 +149,6 @@ class PagoController extends Controller
 
         $pago->save();
 
-
-
         foreach ($request->input('deudas') as $deuda_value) {
 
             $deudaCuota = DeudaCuota::find($deuda_value['id_deuda_cuota']);
@@ -200,9 +157,7 @@ class PagoController extends Controller
 
             $cuotaServicios = CuotaServicios::find($deudaCuota->id_cuota_servicio);
 
-
-
-            $detallePagos = new DetallePagos();
+            $detallePagos = new DetallePagos;
 
             $detallePagos->id_pago = $pago->id_pago;
 
@@ -222,26 +177,19 @@ class PagoController extends Controller
 
         }
 
-        $sumaImporte = DetallePagos::where('id_pago',$pago->id_pago)->sum('importe');
+        $sumaImporte = DetallePagos::where('id_pago', $pago->id_pago)->sum('importe');
 
         $pago->total_pago = $sumaImporte;
 
         $pago->save();
 
-
-
         DB::commit();
-
-
 
         return response()->json(['data' => $pago, 'message' => 'El pago fue registrado con exito'], 200);
 
     }
 
-
-
     public function storePagoPorBanco(Request $request)
-
     {
 
         $validator = Validator::make($request->all(), [
@@ -284,29 +232,21 @@ class PagoController extends Controller
 
         ]);
 
-
-
         if ($validator->fails()) {
 
             return response()->json(['error' => $validator->errors()->first()], 400);
 
         }
 
-       
-
         $documento = Documento::find(1);
 
-        if (!$documento) {
+        if (! $documento) {
 
             return response()->json(['error' => 'No se encontro el documento.'], 400);
 
         }
 
-
-
-        $no_validos = "";
-
-
+        $no_validos = '';
 
         foreach ($request->input('deudas') as $deuda_value) {
 
@@ -314,35 +254,29 @@ class PagoController extends Controller
 
             $importe_a_cuenta = DetallePagos::select('detalle_pagos.*')
 
-                ->where('id_deuda_cuota',$deuda_value['id_deuda_cuota'])
+                ->where('id_deuda_cuota', $deuda_value['id_deuda_cuota'])
 
-                ->sum("importe");
+                ->sum('importe');
 
             $importe_a_cuenta = $importe_a_cuenta ?? 0;
 
             $resto_de_deuda = $deudaCuota->monto - $importe_a_cuenta;
 
+            if (! ($resto_de_deuda >= $deuda_value['importe'])) {
 
-
-            if(!($resto_de_deuda >= $deuda_value['importe'])){
-
-                $no_validos .= "#".$deuda_value['id_deuda_cuota']." ".$deuda_value['importe']." ";
+                $no_validos .= '#'.$deuda_value['id_deuda_cuota'].' '.$deuda_value['importe'].' ';
 
             }
 
         }
 
-        if($no_validos != ""){
+        if ($no_validos != '') {
 
             return response()->json(['error' => 'No se recibieron deudas válidas ('.$no_validos.').'], 400);
 
         }
 
-
-
         DB::beginTransaction();
-
-
 
         $numeroDocumentoNuevo = $documento->numero_documento + 1;
 
@@ -350,13 +284,9 @@ class PagoController extends Controller
 
         $documento->update();
 
-
-
         $numero_pago_nueno = str_pad($numeroDocumentoNuevo, 8, '0', STR_PAD_LEFT);
 
-
-
-        $pago = new Pago();
+        $pago = new Pago;
 
         $pago->id_socio = $request->input('id_socio');
 
@@ -372,9 +302,7 @@ class PagoController extends Controller
 
         $pago->save();
 
-
-
-        $pagoBanco = new PagoBanco();
+        $pagoBanco = new PagoBanco;
 
         $pagoBanco->id_pagobanco = $pago->id_pago;
 
@@ -388,8 +316,6 @@ class PagoController extends Controller
 
         $pagoBanco->save();
 
-
-
         foreach ($request->input('deudas') as $deuda_value) {
 
             $deudaCuota = DeudaCuota::find($deuda_value['id_deuda_cuota']);
@@ -398,9 +324,7 @@ class PagoController extends Controller
 
             $cuotaServicios = CuotaServicios::find($deudaCuota->id_cuota_servicio);
 
-
-
-            $detallePagos = new DetallePagos();
+            $detallePagos = new DetallePagos;
 
             $detallePagos->id_pago = $pago->id_pago;
 
@@ -420,29 +344,22 @@ class PagoController extends Controller
 
         }
 
-        $sumaImporte = DetallePagos::where('id_pago',$pago->id_pago)->sum('importe');
+        $sumaImporte = DetallePagos::where('id_pago', $pago->id_pago)->sum('importe');
 
         $pago->total_pago = $sumaImporte;
 
         $pago->save();
 
-
-
         DB::commit();
-
-
 
         return response()->json(['data' => $pago, 'message' => 'El pago fue registrado con exito'], 200);
 
     }
 
-
-
     public function ListaDeudaCuotas($id_puesto)
-
     {
 
-        $deuda_cuota = DeudaCuota::select('deuda_cuotas.a_cuenta', 'cuotas.fecha_registro', 'servicios.descripcion as servicio', 'cuotas.importe')
+        $deuda_cuota = DeudaCuota::select('deuda_cuotas.a_cuenta', 'cuotas.fecha_emision', 'servicios.descripcion as servicio', 'cuotas.importe')
 
             ->join('cuotas', 'deuda_cuotas.id_cuota', '=', 'cuotas.id_cuota')
 
@@ -454,53 +371,38 @@ class PagoController extends Controller
 
             ->get();
 
-
-
         return response()->json($deuda_cuota);
 
     }
 
-
-
     public function export()
-
     {
 
-        return Excel::download(new PagosExport(), 'pagos.xlsx');
+        return Excel::download(new PagosExport, 'pagos.xlsx');
 
     }
 
-
-
     public function exportPDF()
-
     {
 
-        $export = new PagosPDFExport();
+        $export = new PagosPDFExport;
 
         return $export->generatePDF();
 
     }
 
-
-
     public function import(Request $request)
-
     {
 
         $request->validate([
 
-            'file' => 'required|mimes:xlsx,xls,csv'
+            'file' => 'required|mimes:xlsx,xls,csv',
 
         ]);
 
-
-
-        $import = new \App\Imports\PagosImport();
+        $import = new \App\Imports\PagosImport;
 
         Excel::import($import, $request->file('file'));
-
-
 
         return response()->json([
 
@@ -508,16 +410,13 @@ class PagoController extends Controller
 
             'imported_count' => $import->getImportedCount(),
 
-            'errors' => $import->getErrors()
+            'errors' => $import->getErrors(),
 
         ], 200);
 
     }
 
-
-
     public function update(Request $request, Pago $pago)
-
     {
 
         $validator = Validator::make($request->all(), [
@@ -526,15 +425,11 @@ class PagoController extends Controller
 
         ]);
 
-
-
         if ($validator->fails()) {
 
             return response()->json(['error' => $validator->errors()->first()], 400);
 
         }
-
-
 
         DB::beginTransaction();
 
@@ -543,8 +438,6 @@ class PagoController extends Controller
             $pago->fecha_registro = $request->fecha_registro;
 
             $pago->save();
-
-
 
             if ($pago->PagoBanco && $request->has('numero_operacion')) {
 
@@ -562,8 +455,6 @@ class PagoController extends Controller
 
             }
 
-
-
             DB::commit();
 
             return response()->json(['data' => $pago, 'message' => 'El pago fue actualizado con éxito'], 200);
@@ -572,13 +463,11 @@ class PagoController extends Controller
 
             DB::rollBack();
 
-            return response()->json(['error' => 'Error al actualizar el pago: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Error al actualizar el pago.'], 500);
 
         }
 
     }
-
-
 
     public function destroy(Pago $pago)
     {
@@ -594,16 +483,17 @@ class PagoController extends Controller
             $documento = Documento::find(1);
             if ($documento) {
                 $ultimoPago = Pago::orderBy('numero_pago', 'desc')->first();
-                $documento->numero_documento = $ultimoPago ? (int)$ultimoPago->numero_pago : 0;
+                $documento->numero_documento = $ultimoPago ? (int) $ultimoPago->numero_pago : 0;
                 $documento->save();
             }
 
             DB::commit();
+
             return response()->json(['message' => 'El pago ha sido eliminado correctamente'], 200);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Error al eliminar el pago: ' . $e->getMessage()], 500);
+
+            return response()->json(['error' => 'Error al eliminar el pago.'], 500);
         }
     }
-
 }

@@ -2,10 +2,10 @@
 
 namespace App\Http\Resources;
 
+use App\Support\Comprobante;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class ReportePagoResource extends JsonResource
 {
@@ -24,14 +24,16 @@ class ReportePagoResource extends JsonResource
             // Consulta directa a la base de datos para obtener los detalles
             $queryDetalles = DB::table('detalle_pagos')
                 ->leftJoin('servicios', 'detalle_pagos.id_servicio', '=', 'servicios.id_servicio')
+                ->leftJoin('puestos', 'detalle_pagos.id_puesto', '=', 'puestos.id_puesto')
                 ->select(
                     'detalle_pagos.importe',
-                    'servicios.nombre as descripcion'
+                    'servicios.nombre as descripcion',
+                    'puestos.numero_puesto as puesto'
                 )
                 ->where('detalle_pagos.id_pago', $this->id_pago);
 
             // Filtramos por puesto si se solicita un reporte de puesto específico
-            if ($idPuestoRequest && $idPuestoRequest != "") {
+            if ($idPuestoRequest && $idPuestoRequest != '') {
                 $queryDetalles->where('detalle_pagos.id_puesto', $idPuestoRequest);
             }
 
@@ -41,10 +43,12 @@ class ReportePagoResource extends JsonResource
                 'id_pago' => $this->id_pago,
                 'fecha' => $this->fecha_registro,
                 'total' => number_format($this->total_pago, 2, '.', ''),
+                'serie_numero' => Comprobante::formatear($this->serie, $this->numero_pago),
                 'detalle_pagos' => $detalles->map(function ($d) {
                     return [
                         'importe' => number_format($d->importe, 2, '.', ''),
-                        'descripcion' => $d->descripcion ?? 'Servicio/Aporte'
+                        'descripcion' => $d->descripcion ?? 'Servicio/Aporte',
+                        'puesto' => $d->puesto ?? '',
                     ];
                 }),
             ];
@@ -54,6 +58,7 @@ class ReportePagoResource extends JsonResource
                 'id_pago' => $this->id_pago ?? '?',
                 'fecha' => $this->fecha_registro ?? '',
                 'total' => $this->total_pago ?? 0,
+                'serie_numero' => Comprobante::formatear($this->serie ?? '', $this->numero_pago ?? ''),
                 'detalle_pagos' => [],
             ];
         }

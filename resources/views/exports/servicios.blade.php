@@ -26,6 +26,11 @@
       background-color: #f8f9fa;
       font-weight: bold;
       text-align: center;
+      white-space: nowrap;
+    }
+
+    thead {
+      display: table-header-group;
     }
 
     h2 {
@@ -41,7 +46,7 @@
       <tr>
         <th>ID</th>
         <th>Nombre del servicio</th>
-        <th>Costo unitario</th>
+        <th>Costo Unitario</th>
         <th>Tipo de Servicio</th>
         <th>Fecha Registro</th>
       </tr>
@@ -50,7 +55,7 @@
       @foreach($servicios as $servicio)
         <tr>
           <td>{{ $servicio['id'] }}</td>
-          <td>{{ $servicio['descripcion'] }}</td>
+          <td>{{ $servicio['nombre'] }}</td>
           <td>{{ $servicio['costo_unitario'] }}</td>
           <td>{{ $servicio['tipo_servicio'] }}</td>
           <td>{{ $servicio['fecha_registro'] }}</td>

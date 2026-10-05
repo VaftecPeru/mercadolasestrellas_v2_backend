@@ -16,6 +16,7 @@ class Deuda extends Model
     protected $fillable = [
         'id_socio',
         'id_puesto',
+        'id_cuota',
         'total_deuda',
         'fecha_registro',
     ];

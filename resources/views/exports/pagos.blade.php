@@ -32,6 +32,8 @@
       text-align: center;
       margin-top: 20px;
     }
+
+    .right { text-align: right; }
   </style>
 </head>
 <body>
@@ -43,11 +45,11 @@
         <th>Nro. Puesto</th>
         <th>Socio</th>
         <th>DNI</th>
-        <th>Fec. Pago</th>
+        <th>Fecha Pago</th>
         <th>Telefono</th>
         <th>Correo</th>
         <th>A cuenta</th>
-        <th>Monto total</th>
+        <th>Monto Actual</th>
       </tr>
     </thead>
     <tbody>
@@ -61,10 +63,21 @@
           <td>{{ $pago['telefono'] }}</td>
           <td>{{ $pago['correo'] }}</td>
           <td>{{ $pago['a_cuenta'] }}</td>
-          <td>{{ $pago['monto_total'] }}</td>
+          <td>{{ $pago['monto_actual'] }}</td>
         </tr>
       @endforeach
     </tbody>
+    <tfoot>
+      <tr>
+        <th colspan="7" class="right">Total (S/.)</th>
+        <th class="right" style="background-color: #e3f2fd;">
+          S/ {{ number_format($total_a_cuenta, 2) }}
+        </th>
+        <th class="right" style="background-color: #e3f2fd;">
+          S/ {{ number_format($total, 2) }}
+        </th>
+      </tr>
+    </tfoot>
   </table>
 </body>
 </html>

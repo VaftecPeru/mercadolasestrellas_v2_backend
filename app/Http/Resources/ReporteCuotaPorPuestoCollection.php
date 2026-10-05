@@ -2,11 +2,10 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\ResourceCollection;
-use App\Models\DeudaCuota;
 use App\Models\DetallePagos;
+use App\Models\DeudaCuota;
 use Carbon\Carbon;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class ReporteCuotaPorPuestoCollection extends ResourceCollection
 {
@@ -20,19 +19,20 @@ class ReporteCuotaPorPuestoCollection extends ResourceCollection
         return [
             'data' => $this->collection->transform(function ($deuda) {
                 $deudaCuotas = DeudaCuota::select('c.nombre')
-                    ->join('cuota_servicios as b','deuda_cuotas.id_cuota_servicio','b.id_cuota_servicio')
-                    ->join('servicios as c','b.id_servicio','c.id_servicio')
-                    ->where('deuda_cuotas.id_deuda',$deuda->id_deuda)
+                    ->join('cuota_servicios as b', 'deuda_cuotas.id_cuota_servicio', 'b.id_cuota_servicio')
+                    ->join('servicios as c', 'b.id_servicio', 'c.id_servicio')
+                    ->where('deuda_cuotas.id_deuda', $deuda->id_deuda)
                     ->groupBy('c.nombre')->get();
                 $servicio_nombres = implode(', ', $deudaCuotas->pluck('nombre')->toArray());
 
-                $importeSuma = DetallePagos::where('id_deuda',$deuda->id_deuda)->sum('importe');
+                $importeSuma = DetallePagos::where('id_deuda', $deuda->id_deuda)->sum('importe');
                 $importe_pagado = $importeSuma ? $importeSuma : 0;
                 $importe_por_pagar = $deuda->total_deuda - $importe_pagado;
 
                 return [
                     'id_cuota' => $deuda->id_cuota,
-                    'anio' => (new Carbon( $deuda->fecha_registro ))->format('Y'),
+                    'anio' => (new Carbon($deuda->fecha_registro))->format('Y'),
+                    'nombre_completo' => $deuda->socio && $deuda->socio->persona ? $deuda->socio->persona->nombre_completo : '',
                     'servicio_descripcion' => $servicio_nombres,
                     'aprobado' => $deuda->total_deuda,
                     'pagado' => $importe_pagado,
@@ -47,5 +47,5 @@ class ReporteCuotaPorPuestoCollection extends ResourceCollection
                 'total' => $this->collection->count(),
             ],
         ];
-        }
+    }
 }

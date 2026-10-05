@@ -40,6 +40,7 @@ class ReporteDeudaCollection extends ResourceCollection
                         'id_cuota' => $deuda->id_cuota,
                         'anio' => (new Carbon( $deuda->fecha_registro ))->format('Y'),
                         'mes' => $mes,
+                        'fecha' => (new Carbon( $deuda->fecha_registro ))->format('Y-m-d'),
                         'servicio_descripcion' => $servicio_nombres,
                         'total' => $deuda->total_deuda,
                         'importe_pagado' => $importe_pagado,
