@@ -25,14 +25,17 @@ class ReporteDeudasExport implements FromCollection, WithColumnFormatting, WithE
 
     protected $nombre_socio;
 
+    protected $id_socio;
+
     protected $encabezado = ['-', '-', '-', '-', '-'];
 
     private $count = 0;
 
-    public function __construct($id_puesto, $nombre_socio = null)
+    public function __construct($id_puesto, $nombre_socio = null, $id_socio = null)
     {
         $this->id_puesto = $id_puesto;
         $this->nombre_socio = $nombre_socio;
+        $this->id_socio = $id_socio;
         $this->encabezado = $this->resolveEncabezado();
     }
 
@@ -61,10 +64,15 @@ class ReporteDeudasExport implements FromCollection, WithColumnFormatting, WithE
             ->when($this->id_puesto, function ($query) {
                 $query->where('id_puesto', $this->id_puesto);
             })
-            ->when($this->nombre_socio, function ($query) {
-                $texto = FiltroTexto::normalizarNombre($this->nombre_socio);
-                $query->whereHas('socio.persona', function ($q) use ($texto) {
-                    $q->whereRaw('upper(nombre_completo) LIKE upper(?)', ['%'.$texto.'%']);
+            // id_socio es el criterio autoritativo; el nombre solo se usa como respaldo
+            ->when($this->id_socio, function ($query) {
+                $query->where('id_socio', $this->id_socio);
+            }, function ($query) {
+                $query->when($this->nombre_socio, function ($query) {
+                    $texto = FiltroTexto::normalizarNombre($this->nombre_socio);
+                    $query->whereHas('socio.persona', function ($q) use ($texto) {
+                        $q->whereRaw('upper(nombre_completo) LIKE upper(?)', ['%'.$texto.'%']);
+                    });
                 });
             })
             ->get()

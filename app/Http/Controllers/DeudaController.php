@@ -56,15 +56,14 @@ class DeudaController extends Controller
                 DB::raw('coalesce(sum(detalle_pagos.importe),0) as a_cuenta')
             );
 
-        if ($request->has('id_socio') && $request->id_socio != '') {
-            $query->where('deudas.id_socio', $request->id_socio);
-        }
-
         if ($request->has('id_puesto') && $request->id_puesto != '') {
             $query->where('deudas.id_puesto', $request->id_puesto);
         }
 
-        if ($request->has('nombre_socio') && $request->nombre_socio != '') {
+     
+        if ($request->has('id_socio') && $request->id_socio != '') {
+            $query->where('deudas.id_socio', $request->id_socio);
+        } elseif ($request->has('nombre_socio') && $request->nombre_socio != '') {
             $texto = FiltroTexto::normalizarNombre($request->nombre_socio);
             $query->join('socios', 'deudas.id_socio', 'socios.id_socio')
                 ->join('personas', 'socios.id_socio', 'personas.id_persona')

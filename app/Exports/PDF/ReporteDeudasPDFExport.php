@@ -14,7 +14,7 @@ use Carbon\Carbon;
 
 class ReporteDeudasPDFExport
 {
-    public function generatePDF($id_puesto, $nombre_socio = null)
+    public function generatePDF($id_puesto, $nombre_socio = null, $id_socio = null)
     {
 
         $puesto = $id_puesto ? Puesto::find($id_puesto) : null;
@@ -28,10 +28,15 @@ class ReporteDeudasPDFExport
             ->when($id_puesto, function ($query) use ($id_puesto) {
                 $query->where('id_puesto', $id_puesto);
             })
-            ->when($nombre_socio, function ($query) use ($nombre_socio) {
-                $texto = FiltroTexto::normalizarNombre($nombre_socio);
-                $query->whereHas('socio.persona', function ($q) use ($texto) {
-                    $q->whereRaw('upper(nombre_completo) LIKE upper(?)', ['%'.$texto.'%']);
+            // id_socio es el criterio autoritativo; el nombre solo se usa como respaldo
+            ->when($id_socio, function ($query) use ($id_socio) {
+                $query->where('id_socio', $id_socio);
+            }, function ($query) use ($nombre_socio) {
+                $query->when($nombre_socio, function ($query) use ($nombre_socio) {
+                    $texto = FiltroTexto::normalizarNombre($nombre_socio);
+                    $query->whereHas('socio.persona', function ($q) use ($texto) {
+                        $q->whereRaw('upper(nombre_completo) LIKE upper(?)', ['%'.$texto.'%']);
+                    });
                 });
             })
             ->get()

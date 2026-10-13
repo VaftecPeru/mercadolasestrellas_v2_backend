@@ -26,7 +26,7 @@ class ReportePagosExport implements FromCollection, WithColumnFormatting, WithEv
 
     private $count = 0;
 
-    // true = columnas de la pestaña "Pagos Realizados": Fecha Pago | Comprobante | Concepto | Monto
+
     private $modoDetalle = false;
 
     public function __construct($filtro_id)
@@ -75,15 +75,18 @@ class ReportePagosExport implements FromCollection, WithColumnFormatting, WithEv
     {
         $query = Pago::query();
 
-        if (request()->has('id_puesto') && request()->id_puesto != '') {
+        $conPuesto = request()->has('id_puesto') && request()->id_puesto != '';
+
+        if ($conPuesto) {
             $query->whereHas('DetallePagos', function ($q) {
                 $q->where('id_puesto', $this->filtro_id);
             });
-        } else {
-            $query->where('id_socio', $this->filtro_id);
         }
 
-        if (request()->has('nombre_socio') && request()->nombre_socio != '') {
+
+        if (request()->filled('id_socio') || ! $conPuesto) {
+            $query->where('id_socio', request()->input('id_socio'));
+        } elseif (request()->has('nombre_socio') && request()->nombre_socio != '') {
             $texto = FiltroTexto::normalizarNombre(request()->nombre_socio);
             $query->whereHas('socio.persona', function ($q) use ($texto) {
                 $q->whereRaw('upper(nombre_completo) LIKE upper(?)', ['%'.$texto.'%']);

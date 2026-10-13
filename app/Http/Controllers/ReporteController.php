@@ -42,11 +42,12 @@ class ReporteController extends Controller
             $query->whereHas('DetallePagos', function ($q) use ($request) {
                 $q->where('id_puesto', $request->id_puesto);
             });
-        } elseif ($request->has('id_socio') && $request->id_socio != '') {
-            $query->where('id_socio', $request->id_socio);
         }
 
-        if ($request->has('nombre_socio') && $request->nombre_socio != '') {
+
+        if ($request->has('id_socio') && $request->id_socio != '') {
+            $query->where('id_socio', $request->id_socio);
+        } elseif ($request->has('nombre_socio') && $request->nombre_socio != '') {
             $texto = FiltroTexto::normalizarNombre($request->nombre_socio);
             $query->whereHas('socio.persona', function ($q) use ($texto) {
                 $q->whereRaw('upper(nombre_completo) LIKE upper(?)', ['%'.$texto.'%']);
@@ -98,7 +99,7 @@ class ReporteController extends Controller
             return response()->json(['message' => 'No tiene permiso para realizar esta acción.'], 403);
         }
 
-        return Excel::download(new ReporteDeudasExport($request->id_puesto, $request->nombre_socio), 'reporte_deudas.xlsx');
+        return Excel::download(new ReporteDeudasExport($request->id_puesto, $request->nombre_socio, $request->id_socio), 'reporte_deudas.xlsx');
     }
 
     public function exportReporteDeudasPDF(Request $request)
@@ -109,7 +110,7 @@ class ReporteController extends Controller
             return response()->json(['message' => 'No tiene permiso para realizar esta acción.'], 403);
         }
 
-        return $export->generatePDF($request->id_puesto, $request->nombre_socio);
+        return $export->generatePDF($request->id_puesto, $request->nombre_socio, $request->id_socio);
     }
 
     public function cuotaPorMetros(Request $request)

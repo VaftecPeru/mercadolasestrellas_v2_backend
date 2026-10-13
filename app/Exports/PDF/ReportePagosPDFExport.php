@@ -22,7 +22,9 @@ class ReportePagosPDFExport
         $giro_negocio = '-';
         $query = Pago::query();
 
-        if (request()->has('id_puesto') && request()->id_puesto != '') {
+        $conPuesto = request()->has('id_puesto') && request()->id_puesto != '';
+
+        if ($conPuesto) {
             $puesto = Puesto::with(['socio.persona', 'block', 'gironegocio'])->find($filtro_id);
             $numero_puesto = $puesto->numero_puesto ?? '-';
             $area = $puesto->area ?? '-';
@@ -39,10 +41,12 @@ class ReportePagosPDFExport
             $nombre_socio = $socio && $socio->persona
                 ? trim(($socio->persona->nombre ?? '').' '.($socio->persona->apellido_paterno ?? ''))
                 : 'Socio';
-            $query->where('id_socio', $filtro_id);
         }
 
-        if (request()->has('nombre_socio') && request()->nombre_socio != '') {
+
+        if (request()->filled('id_socio') || ! $conPuesto) {
+            $query->where('id_socio', request()->input('id_socio'));
+        } elseif (request()->has('nombre_socio') && request()->nombre_socio != '') {
             $texto = FiltroTexto::normalizarNombre(request()->nombre_socio);
             $query->whereHas('socio.persona', function ($q) use ($texto) {
                 $q->whereRaw('upper(nombre_completo) LIKE upper(?)', ['%'.$texto.'%']);
