@@ -65,19 +65,19 @@
       @foreach($socios as $socio)
       <tr>
         <td rowspan="{{ count($socio['puestos']) }}">{{ $socio['nombre'] }}</td>
-        <td rowspan="{{ count($socio['puestos']) }}">{{ $socio['dni'] }}</td>
-        <td rowspan="{{ count($socio['puestos']) }}">{{ $socio['telefono'] }}</td>
+        <td align="center" rowspan="{{ count($socio['puestos']) }}">{{ $socio['dni'] }}</td>
+        <td align="center" rowspan="{{ count($socio['puestos']) }}">{{ $socio['telefono'] }}</td>
         <td rowspan="{{ count($socio['puestos']) }}">{{ $socio['correo'] }}</td>
-        <td>{{ $socio['puestos'][0]['block'] }}</td>
-        <td>{{ $socio['puestos'][0]['numero'] }}</td>
+        <td align="center">{{ $socio['puestos'][0]['block'] }}</td>
+        <td align="center">{{ $socio['puestos'][0]['numero'] }}</td>
         <td>{{ $socio['puestos'][0]['giro'] }}</td>
         <td>{{ $socio['puestos'][0]['inquilino'] }}</td>
-        <td rowspan="{{ count($socio['puestos']) }}">{{ $socio['fecha_registro'] }}</td>
+        <td align="center" rowspan="{{ count($socio['puestos']) }}">{{ $socio['fecha_registro'] }}</td>
       </tr>
       @for($i = 1; $i < count($socio['puestos']); $i++)
       <tr>
-        <td>{{ $socio['puestos'][$i]['block'] }}</td>
-        <td>{{ $socio['puestos'][$i]['numero'] }}</td>
+        <td align="center">{{ $socio['puestos'][$i]['block'] }}</td>
+        <td align="center">{{ $socio['puestos'][$i]['numero'] }}</td>
         <td>{{ $socio['puestos'][$i]['giro'] }}</td>
         <td>{{ $socio['puestos'][$i]['inquilino'] }}</td>
       </tr>

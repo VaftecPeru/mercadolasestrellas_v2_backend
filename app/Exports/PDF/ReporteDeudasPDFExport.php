@@ -6,6 +6,7 @@ use App\Models\DetallePagos;
 use App\Models\Deuda;
 use App\Models\DeudaCuota;
 use App\Models\Puesto;
+use App\Models\Servicio;
 use App\Models\SetupMes;
 use App\Support\FiltroTexto;
 use Barryvdh\DomPDF\PDF;
@@ -35,6 +36,7 @@ class ReporteDeudasPDFExport
             })
             ->get()
             ->map(function ($deuda) {
+
                 $anio = (new Carbon($deuda->fecha_registro))->format('Y');
 
                 $mes = '';
@@ -42,12 +44,13 @@ class ReporteDeudasPDFExport
                 $mesCarbon = (int) $mesCarbon;
                 $mes = (SetupMes::find($mesCarbon))->nombre;
 
-                $deudaCuotas = DeudaCuota::select('c.nombre')
+                $deudaCuotas = DeudaCuota::select('c.nombre', 'c.tipo_servicio')
                     ->join('cuota_servicios as b', 'deuda_cuotas.id_cuota_servicio', 'b.id_cuota_servicio')
                     ->join('servicios as c', 'b.id_servicio', 'c.id_servicio')
                     ->where('deuda_cuotas.id_deuda', $deuda->id_deuda)
-                    ->groupBy('c.nombre')->get();
+                    ->groupBy('c.nombre', 'c.tipo_servicio')->get();
                 $servicio_nombres = implode(', ', $deudaCuotas->pluck('nombre')->toArray());
+                $tipo_servicios = implode(', ', $deudaCuotas->map(fn ($item) => Servicio::nombreTipoServicio($item->tipo_servicio))->unique()->toArray());
 
                 $importeSuma = DetallePagos::where('id_deuda', $deuda->id_deuda)->sum('importe');
                 $importe_pagado = $importeSuma ?? 0;
@@ -58,6 +61,7 @@ class ReporteDeudasPDFExport
                     'mes' => $mes,
                     'fecha' => (new Carbon($deuda->fecha_registro))->format('Y-m-d'),
                     'servicio_descripcion' => $servicio_nombres,
+                    'tipo_servicio' => $tipo_servicios ?: '-',
                     'total' => number_format($deuda->total_deuda, 2, '.', ''),
                     'importe_pagado' => number_format($importe_pagado, 2, '.', ''),
                     'importe_por_pagar' => number_format($importe_por_pagar, 2, '.', ''),

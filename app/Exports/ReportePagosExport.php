@@ -4,6 +4,7 @@ namespace App\Exports;
 
 use App\Models\Pago;
 use App\Models\Puesto;
+use App\Models\Servicio;
 use App\Models\Socio;
 use App\Support\Comprobante;
 use App\Support\FiltroTexto;
@@ -102,17 +103,20 @@ class ReportePagosExport implements FromCollection, WithColumnFormatting, WithEv
             $countDetalles = count($detalles);
 
             foreach ($detalles as $index => $detalle) {
+                $tipoServicioNombre = isset($detalle->servicio) ? Servicio::nombreTipoServicio($detalle->servicio->tipo_servicio) : '-';
                 if ($this->modoDetalle) {
                     $rows[] = [
                         'fecha' => $index === 0 ? $fechaFmt : '',
                         'comprobante' => $index === 0 ? Comprobante::formatear($pago->serie, $pago->numero_pago) : '',
                         'concepto' => $detalle->servicio->nombre ?? 'Servicio',
+                        'tipo_servicio' => $tipoServicioNombre,
                         'monto' => ($index === $countDetalles - 1) ? $pago->total_pago : $detalle->importe,
                     ];
                 } else {
                     $rows[] = [
                         'fecha' => $fechaFmt,
                         'servicio' => $detalle->servicio->nombre ?? 'Servicio',
+                        'tipo_servicio' => $tipoServicioNombre,
                         'monto' => $detalle->importe,
                         'total' => ($index === $countDetalles - 1) ? $pago->total_pago : null,
                     ];
@@ -132,6 +136,7 @@ class ReportePagosExport implements FromCollection, WithColumnFormatting, WithEv
                 'Fecha Pago',
                 'Comprobante',
                 'Concepto',
+                'Tipo de Servicio',
                 'Monto (S/.)',
             ];
         }
@@ -139,6 +144,7 @@ class ReportePagosExport implements FromCollection, WithColumnFormatting, WithEv
         return [
             'Fecha Pago',
             'Servicios',
+            'Tipo de Servicio',
             'Total (S/.)',
             'Imp. Pagado (S/.)',
         ];
@@ -148,13 +154,13 @@ class ReportePagosExport implements FromCollection, WithColumnFormatting, WithEv
     {
         if ($this->modoDetalle) {
             return [
-                'D' => NumberFormat::FORMAT_NUMBER_00,
+                'E' => NumberFormat::FORMAT_NUMBER_00,
             ];
         }
 
         return [
-            'C' => NumberFormat::FORMAT_NUMBER_00,
             'D' => NumberFormat::FORMAT_NUMBER_00,
+            'E' => NumberFormat::FORMAT_NUMBER_00,
         ];
     }
 
@@ -188,15 +194,15 @@ class ReportePagosExport implements FromCollection, WithColumnFormatting, WithEv
                     $lastRow = $event->sheet->getHighestRow() + 1;
                     $event->sheet->setCellValue('A'.($lastRow), 'Total (S/.)');
                     $event->sheet->getStyle("A{$lastRow}")->getAlignment()->setHorizontal('right');
-                    $event->sheet->getStyle("A{$lastRow}:D{$lastRow}")->getFont()->setBold(true);
+                    $event->sheet->getStyle("A{$lastRow}:E{$lastRow}")->getFont()->setBold(true);
 
                     if ($this->modoDetalle) {
+                        $event->sheet->mergeCells("A{$lastRow}:D{$lastRow}");
+                        $event->sheet->setCellValue('E'.($lastRow), '=SUM(E4:E'.($lastRow - 1).')');
+                    } else {
                         $event->sheet->mergeCells("A{$lastRow}:C{$lastRow}");
                         $event->sheet->setCellValue('D'.($lastRow), '=SUM(D4:D'.($lastRow - 1).')');
-                    } else {
-                        $event->sheet->mergeCells("A{$lastRow}:B{$lastRow}");
-                        $event->sheet->setCellValue('C'.($lastRow), '=SUM(C4:C'.($lastRow - 1).')');
-                        $event->sheet->setCellValue('D'.($lastRow), '=SUM(D4:D'.($lastRow - 1).')');
+                        $event->sheet->setCellValue('E'.($lastRow), '=SUM(E4:E'.($lastRow - 1).')');
                     }
                 }
             },

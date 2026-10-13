@@ -4,6 +4,7 @@ namespace App\Exports\PDF;
 
 use App\Models\Pago;
 use App\Models\Puesto;
+use App\Models\Servicio;
 use App\Models\Socio;
 use App\Support\Comprobante;
 use App\Support\FiltroTexto;
@@ -72,6 +73,7 @@ class ReportePagosPDFExport
                     'detalles' => $pago->DetallePagos->map(function ($detalle) {
                         return [
                             'servicio_nombre' => $detalle->servicio->nombre ?? 'Servicio',
+                            'tipo_servicio' => isset($detalle->servicio) ? Servicio::nombreTipoServicio($detalle->servicio->tipo_servicio) : '-',
                             'importe' => $detalle->importe,
                         ];
                     }),

@@ -56,11 +56,12 @@
     <tbody>
       <tr>
         <td>{{ $nombre_socio }}</td>
-        <td>{{ $nombre_bloque }}</td>
-        <td>{{ $numero_puesto }}</td>
-        <td>{{ $area }}</td>
+        <td align="center">{{ $nombre_bloque }}</td>
+        <td align="center">{{ $numero_puesto }}</td>
+        <td align="center">{{ $area }}</td>
         <td>{{ $giro_negocio }}</td>
       </tr>
+    </tbody>
   </table>
   <table>
     <thead>
