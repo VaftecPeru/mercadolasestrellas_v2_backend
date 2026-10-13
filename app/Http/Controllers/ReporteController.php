@@ -34,6 +34,10 @@ class ReporteController extends Controller
     {
         $per_page = $request->get('per_page', 15);
 
+        if ($this->esSocio($request) && $this->idSocioAutenticado($request) === null) {
+            return response()->json(['message' => 'No se encontró un socio vinculado a la cuenta.'], 403);
+        }
+
         $this->aplicarScopeSocio($request);
 
         $query = Pago::query();
@@ -64,6 +68,10 @@ class ReporteController extends Controller
     public function exportReportePagos(Request $request)
     {
 
+        if ($this->esSocio($request) && $this->idSocioAutenticado($request) === null) {
+            return response()->json(['message' => 'No se encontró un socio vinculado a la cuenta.'], 403);
+        }
+
         $this->aplicarScopeSocio($request);
 
         $filtro = $request->id_puesto ?? $request->id_socio;
@@ -74,6 +82,10 @@ class ReporteController extends Controller
     public function exportReportePagosPDF(Request $request)
     {
         $export = new ReportePagosPDFExport;
+
+        if ($this->esSocio($request) && $this->idSocioAutenticado($request) === null) {
+            return response()->json(['message' => 'No se encontró un socio vinculado a la cuenta.'], 403);
+        }
 
         $this->aplicarScopeSocio($request);
 
