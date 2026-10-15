@@ -8,6 +8,7 @@ use App\Models\DeudaCuota;
 use App\Models\Puesto;
 use App\Models\Servicio;
 use App\Models\SetupMes;
+use App\Models\Socio;
 use App\Support\FiltroTexto;
 use Barryvdh\DomPDF\PDF;
 use Carbon\Carbon;
@@ -19,6 +20,10 @@ class ReporteDeudasPDFExport
 
         $puesto = $id_puesto ? Puesto::find($id_puesto) : null;
         $nombre_socio_puesto = $puesto?->socio?->persona?->nombre_completo ?? '-';
+        if ($nombre_socio_puesto === '-' && $id_socio) {
+            $socioObj = Socio::with('persona')->find($id_socio);
+            $nombre_socio_puesto = $socioObj?->persona?->nombre_completo ?? '-';
+        }
         $nombre_bloque = $puesto?->block?->nombre ?? '-';
         $numero_puesto = $puesto?->numero_puesto ?? '-';
         $area = $puesto?->area ?? '-';

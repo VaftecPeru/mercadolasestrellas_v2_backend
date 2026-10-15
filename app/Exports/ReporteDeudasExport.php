@@ -7,6 +7,7 @@ use App\Models\Deuda;
 use App\Models\DeudaCuota;
 use App\Models\Puesto;
 use App\Models\Servicio;
+use App\Models\Socio;
 use App\Support\FiltroTexto;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
@@ -43,19 +44,36 @@ class ReporteDeudasExport implements FromCollection, WithColumnFormatting, WithE
     {
         $default = ['-', '-', '-', '-', '-'];
 
-        $puesto = Puesto::with(['socio.persona', 'block', 'gironegocio'])->find($this->id_puesto);
+        if ($this->id_puesto) {
+            $puesto = Puesto::with(['socio.persona', 'block', 'gironegocio'])->find($this->id_puesto);
 
-        if (! $puesto) {
-            return $default;
+            if (! $puesto) {
+                return $default;
+            }
+
+            return [
+                $puesto->socio && $puesto->socio->persona ? $puesto->socio->persona->nombre_completo : '-',
+                $puesto->block ? $puesto->block->nombre : '-',
+                $puesto->numero_puesto ?? '-',
+                $puesto->area ?? '-',
+                $puesto->gironegocio ? $puesto->gironegocio->nombre : '-',
+            ];
         }
 
-        return [
-            $puesto->socio && $puesto->socio->persona ? $puesto->socio->persona->nombre_completo : '-',
-            $puesto->block ? $puesto->block->nombre : '-',
-            $puesto->numero_puesto ?? '-',
-            $puesto->area ?? '-',
-            $puesto->gironegocio ? $puesto->gironegocio->nombre : '-',
-        ];
+        if ($this->id_socio) {
+            $socio = Socio::with('persona')->find($this->id_socio);
+            if ($socio && $socio->persona) {
+                return [
+                    $socio->persona->nombre_completo,
+                    '-',
+                    '-',
+                    '-',
+                    '-',
+                ];
+            }
+        }
+
+        return $default;
     }
 
     public function collection()

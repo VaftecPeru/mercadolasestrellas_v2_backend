@@ -44,7 +44,6 @@ class ReporteController extends Controller
             });
         }
 
-
         if ($request->has('id_socio') && $request->id_socio != '') {
             $query->where('id_socio', $request->id_socio);
         } elseif ($request->has('nombre_socio') && $request->nombre_socio != '') {
@@ -87,17 +86,24 @@ class ReporteController extends Controller
     {
         $per_page = $request->get('per_page', 15);
 
-        $paginate = Deuda::where('id_puesto', $request->id_puesto)
-            ->paginate($per_page);
+        $this->aplicarScopeSocio($request);
+
+        $query = Deuda::query();
+        if ($request->has('id_puesto') && $request->id_puesto != '') {
+            $query->where('id_puesto', $request->id_puesto);
+        }
+        if ($request->has('id_socio') && $request->id_socio != '') {
+            $query->where('id_socio', $request->id_socio);
+        }
+
+        $paginate = $query->paginate($per_page);
 
         return new ReporteDeudaCollection($paginate);
     }
 
     public function exportReporteDeudas(Request $request)
     {
-        if (! $this->verificarPuestoDelSocio($request)) {
-            return response()->json(['message' => 'No tiene permiso para realizar esta acción.'], 403);
-        }
+        $this->aplicarScopeSocio($request);
 
         return Excel::download(new ReporteDeudasExport($request->id_puesto, $request->nombre_socio, $request->id_socio), 'reporte_deudas.xlsx');
     }
@@ -106,9 +112,7 @@ class ReporteController extends Controller
     {
         $export = new ReporteDeudasPDFExport;
 
-        if (! $this->verificarPuestoDelSocio($request)) {
-            return response()->json(['message' => 'No tiene permiso para realizar esta acción.'], 403);
-        }
+        $this->aplicarScopeSocio($request);
 
         return $export->generatePDF($request->id_puesto, $request->nombre_socio, $request->id_socio);
     }

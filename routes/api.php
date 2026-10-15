@@ -57,14 +57,20 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('/servicios/multa-inasistencia', [ServicioController::class, 'consultarImporteMultaInasistencia']);
         Route::get('/servicios/consultar-importe-multa-inasistencia', [ServicioController::class, 'consultarImporteMultaInasistencia']);
 
-        Route::get('/deudas', [DeudaController::class, 'index']);
-        Route::get('/deudas/pendientes', [DeudaController::class, 'deudaPendientes']);
+        // Reporte de deudas (módulo 9)
+        Route::middleware('permiso:9')->group(function () {
+            Route::get('/deudas', [DeudaController::class, 'index']);
+            Route::get('/deudas/pendientes', [DeudaController::class, 'deudaPendientes']);
+            Route::get('/reportes/deudas/exportar', [ReporteController::class, 'exportReporteDeudas']);
+            Route::get('/reportes/deudas/exportar-pdf', [ReporteController::class, 'exportReporteDeudasPDF']);
+        });
 
-        Route::get('/reportes/pagos', [ReporteController::class, 'pagos']);
-        Route::get('/reportes/pagos/exportar', [ReporteController::class, 'exportReportePagos']);
-        Route::get('/reportes/pagos/exportar-pdf', [ReporteController::class, 'exportReportePagosPDF']);
-        Route::get('/reportes/deudas/exportar', [ReporteController::class, 'exportReporteDeudas']);
-        Route::get('/reportes/deudas/exportar-pdf', [ReporteController::class, 'exportReporteDeudasPDF']);
+        // Reporte de pagos (módulo 8) — accesible también desde pestaña Pagos de Reporte Deudas (módulo 9)
+        Route::middleware('permiso:8,9')->group(function () {
+            Route::get('/reportes/pagos', [ReporteController::class, 'pagos']);
+            Route::get('/reportes/pagos/exportar', [ReporteController::class, 'exportReportePagos']);
+            Route::get('/reportes/pagos/exportar-pdf', [ReporteController::class, 'exportReportePagosPDF']);
+        });
 
         // Dashboard (Panel de Control — módulo 1)
         Route::get('/reportes/dashboard', [ReporteController::class, 'dashboard'])->middleware('permiso:1');
