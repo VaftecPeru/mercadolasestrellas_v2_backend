@@ -63,12 +63,9 @@ class ReporteController extends Controller
 
     public function exportReportePagos(Request $request)
     {
-
         $this->aplicarScopeSocio($request);
 
-        $filtro = $request->id_puesto ?? $request->id_socio;
-
-        return Excel::download(new ReportePagosExport($filtro), 'reporte_pagos.xlsx');
+        return Excel::download(new ReportePagosExport($request->id_puesto, $request->id_socio, $request->nombre_socio), 'reporte_pagos.xlsx');
     }
 
     public function exportReportePagosPDF(Request $request)
@@ -77,9 +74,7 @@ class ReporteController extends Controller
 
         $this->aplicarScopeSocio($request);
 
-        $filtro = $request->id_puesto ?? $request->id_socio;
-
-        return $export->generatePDF($filtro);
+        return $export->generatePDF($request->id_puesto, $request->id_socio, $request->nombre_socio);
     }
 
     public function deudas(Request $request)

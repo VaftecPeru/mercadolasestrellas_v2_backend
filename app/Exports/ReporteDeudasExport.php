@@ -51,8 +51,16 @@ class ReporteDeudasExport implements FromCollection, WithColumnFormatting, WithE
                 return $default;
             }
 
+            $nombreSocio = $puesto->socio && $puesto->socio->persona ? $puesto->socio->persona->nombre_completo : '-';
+            if ($nombreSocio === '-' && $this->id_socio) {
+                $socioObj = Socio::with('persona')->find($this->id_socio);
+                if ($socioObj && $socioObj->persona) {
+                    $nombreSocio = $socioObj->persona->nombre_completo;
+                }
+            }
+
             return [
-                $puesto->socio && $puesto->socio->persona ? $puesto->socio->persona->nombre_completo : '-',
+                $nombreSocio,
                 $puesto->block ? $puesto->block->nombre : '-',
                 $puesto->numero_puesto ?? '-',
                 $puesto->area ?? '-',

@@ -20,18 +20,36 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class ReportePagosExport implements FromCollection, WithColumnFormatting, WithEvents, WithHeadings, WithStrictNullComparison, WithStyles
 {
-    protected $filtro_id;
+    protected $id_puesto;
+
+    protected $id_socio;
+
+    protected $nombre_socio;
 
     protected $encabezado = ['-', '-', '-', '-', '-'];
 
     private $count = 0;
 
-
     private $modoDetalle = false;
 
-    public function __construct($filtro_id)
+    public function __construct($id_puesto = null, $id_socio = null, $nombre_socio = null)
     {
-        $this->filtro_id = $filtro_id;
+        // Soporte retrocompatible si se pasa un solo argumento ($filtro_id)
+        if (func_num_args() === 1 && ! is_array($id_puesto)) {
+            if (request()->has('id_puesto') && request()->id_puesto != '') {
+                $this->id_puesto = request()->id_puesto;
+                $this->id_socio = request()->input('id_socio');
+            } else {
+                $this->id_socio = $id_puesto ?: request()->input('id_socio');
+                $this->id_puesto = null;
+            }
+            $this->nombre_socio = request()->input('nombre_socio');
+        } else {
+            $this->id_puesto = $id_puesto ?: request()->input('id_puesto');
+            $this->id_socio = $id_socio ?: request()->input('id_socio');
+            $this->nombre_socio = $nombre_socio ?: request()->input('nombre_socio');
+        }
+
         $this->modoDetalle = request()->query('modo') === 'detalle';
         $this->encabezado = $this->resolveEncabezado();
     }
@@ -40,54 +58,59 @@ class ReportePagosExport implements FromCollection, WithColumnFormatting, WithEv
     {
         $default = ['-', '-', '-', '-', '-'];
 
-        if (request()->has('id_puesto') && request()->id_puesto != '') {
-            $puesto = Puesto::with(['socio.persona', 'block', 'gironegocio'])->find($this->filtro_id);
+        if ($this->id_puesto) {
+            $puesto = Puesto::with(['socio.persona', 'block', 'gironegocio'])->find($this->id_puesto);
 
-            if (! $puesto) {
-                return $default;
+            if ($puesto) {
+                $nombreSocio = $puesto->socio && $puesto->socio->persona ? $puesto->socio->persona->nombre_completo : '-';
+                if ($nombreSocio === '-' && $this->id_socio) {
+                    $socioObj = Socio::with('persona')->find($this->id_socio);
+                    if ($socioObj && $socioObj->persona) {
+                        $nombreSocio = $socioObj->persona->nombre_completo;
+                    }
+                }
+
+                return [
+                    $nombreSocio,
+                    $puesto->block ? $puesto->block->nombre : '-',
+                    $puesto->numero_puesto ?? '-',
+                    $puesto->area ?? '-',
+                    $puesto->gironegocio ? $puesto->gironegocio->nombre : '-',
+                ];
             }
-
-            return [
-                $puesto->socio && $puesto->socio->persona ? $puesto->socio->persona->nombre_completo : '-',
-                $puesto->block ? $puesto->block->nombre : '-',
-                $puesto->numero_puesto ?? '-',
-                $puesto->area ?? '-',
-                $puesto->gironegocio ? $puesto->gironegocio->nombre : '-',
-            ];
         }
 
-        $socio = Socio::with('persona')->find($this->filtro_id);
+        if ($this->id_socio) {
+            $socio = Socio::with('persona')->find($this->id_socio);
 
-        if (! $socio || ! $socio->persona) {
-            return $default;
+            if ($socio && $socio->persona) {
+                return [
+                    $socio->persona->nombre_completo ?: 'Socio',
+                    '-',
+                    '-',
+                    '-',
+                    '-',
+                ];
+            }
         }
 
-        return [
-            trim(($socio->persona->nombre ?? '').' '.($socio->persona->apellido_paterno ?? '').' '.($socio->persona->apellido_materno ?? '')) ?: 'Socio',
-            '-',
-            '-',
-            '-',
-            '-',
-        ];
+        return $default;
     }
 
     public function collection()
     {
         $query = Pago::query();
 
-        $conPuesto = request()->has('id_puesto') && request()->id_puesto != '';
-
-        if ($conPuesto) {
+        if ($this->id_puesto) {
             $query->whereHas('DetallePagos', function ($q) {
-                $q->where('id_puesto', $this->filtro_id);
+                $q->where('id_puesto', $this->id_puesto);
             });
         }
 
-
-        if (request()->filled('id_socio') || ! $conPuesto) {
-            $query->where('id_socio', request()->input('id_socio'));
-        } elseif (request()->has('nombre_socio') && request()->nombre_socio != '') {
-            $texto = FiltroTexto::normalizarNombre(request()->nombre_socio);
+        if ($this->id_socio) {
+            $query->where('id_socio', $this->id_socio);
+        } elseif ($this->nombre_socio) {
+            $texto = FiltroTexto::normalizarNombre($this->nombre_socio);
             $query->whereHas('socio.persona', function ($q) use ($texto) {
                 $q->whereRaw('upper(nombre_completo) LIKE upper(?)', ['%'.$texto.'%']);
             });

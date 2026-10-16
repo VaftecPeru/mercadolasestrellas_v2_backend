@@ -12,42 +12,58 @@ use Barryvdh\DomPDF\PDF;
 
 class ReportePagosPDFExport
 {
-    public function generatePDF($filtro_id)
+    public function generatePDF($id_puesto = null, $id_socio = null, $nombre_socio = null)
     {
+        // Soporte retrocompatible si se llama con 1 solo parámetro
+        if (func_num_args() === 1 && ! is_array($id_puesto)) {
+            if (request()->has('id_puesto') && request()->id_puesto != '') {
+                $idPuestoFinal = request()->id_puesto;
+                $idSocioFinal = request()->input('id_socio');
+            } else {
+                $idSocioFinal = $id_puesto ?: request()->input('id_socio');
+                $idPuestoFinal = null;
+            }
+            $nombreSocioFinal = request()->input('nombre_socio');
+        } else {
+            $idPuestoFinal = $id_puesto ?: request()->input('id_puesto');
+            $idSocioFinal = $id_socio ?: request()->input('id_socio');
+            $nombreSocioFinal = $nombre_socio ?: request()->input('nombre_socio');
+        }
 
-        $nombre_socio = '';
+        $nombre_socio = '-';
         $nombre_bloque = '-';
         $numero_puesto = '-';
         $area = '-';
         $giro_negocio = '-';
         $query = Pago::query();
 
-        $conPuesto = request()->has('id_puesto') && request()->id_puesto != '';
-
-        if ($conPuesto) {
-            $puesto = Puesto::with(['socio.persona', 'block', 'gironegocio'])->find($filtro_id);
-            $numero_puesto = $puesto->numero_puesto ?? '-';
-            $area = $puesto->area ?? '-';
-            $nombre_bloque = $puesto->block ? $puesto->block->nombre : '-';
-            $giro_negocio = $puesto->gironegocio ? $puesto->gironegocio->nombre : '-';
-            $nombre_socio = $puesto->socio && $puesto->socio->persona
-                ? $puesto->socio->persona->nombre_completo
-                : '-';
-            $query->whereHas('DetallePagos', function ($q) use ($filtro_id) {
-                $q->where('id_puesto', $filtro_id);
+        if ($idPuestoFinal) {
+            $puesto = Puesto::with(['socio.persona', 'block', 'gironegocio'])->find($idPuestoFinal);
+            if ($puesto) {
+                $numero_puesto = $puesto->numero_puesto ?? '-';
+                $area = $puesto->area ?? '-';
+                $nombre_bloque = $puesto->block ? $puesto->block->nombre : '-';
+                $giro_negocio = $puesto->gironegocio ? $puesto->gironegocio->nombre : '-';
+                $nombre_socio = $puesto->socio && $puesto->socio->persona
+                    ? $puesto->socio->persona->nombre_completo
+                    : '-';
+            }
+            $query->whereHas('DetallePagos', function ($q) use ($idPuestoFinal) {
+                $q->where('id_puesto', $idPuestoFinal);
             });
-        } else {
-            $socio = Socio::with('persona')->find($filtro_id);
-            $nombre_socio = $socio && $socio->persona
-                ? trim(($socio->persona->nombre ?? '').' '.($socio->persona->apellido_paterno ?? ''))
-                : 'Socio';
         }
 
+        if ($nombre_socio === '-' && $idSocioFinal) {
+            $socio = Socio::with('persona')->find($idSocioFinal);
+            if ($socio && $socio->persona) {
+                $nombre_socio = $socio->persona->nombre_completo ?: 'Socio';
+            }
+        }
 
-        if (request()->filled('id_socio') || ! $conPuesto) {
-            $query->where('id_socio', request()->input('id_socio'));
-        } elseif (request()->has('nombre_socio') && request()->nombre_socio != '') {
-            $texto = FiltroTexto::normalizarNombre(request()->nombre_socio);
+        if ($idSocioFinal) {
+            $query->where('id_socio', $idSocioFinal);
+        } elseif (! empty($nombreSocioFinal)) {
+            $texto = FiltroTexto::normalizarNombre($nombreSocioFinal);
             $query->whereHas('socio.persona', function ($q) use ($texto) {
                 $q->whereRaw('upper(nombre_completo) LIKE upper(?)', ['%'.$texto.'%']);
             });
