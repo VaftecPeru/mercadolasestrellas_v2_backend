@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BlockController;
+use App\Http\Controllers\ConsultaDocumentoController;
 use App\Http\Controllers\CuotaController;
 use App\Http\Controllers\DeudaController;
 use App\Http\Controllers\GiroNegocioController;
@@ -56,6 +57,10 @@ Route::group(['prefix' => 'v1'], function () {
 
         Route::get('/servicios/multa-inasistencia', [ServicioController::class, 'consultarImporteMultaInasistencia']);
         Route::get('/servicios/consultar-importe-multa-inasistencia', [ServicioController::class, 'consultarImporteMultaInasistencia']);
+
+        // Consultas de Identidad y Empresas (RENIEC / SUNAT)
+        Route::get('/consultas/dni/{numero}', [ConsultaDocumentoController::class, 'consultarDni']);
+        Route::get('/consultas/ruc/{numero}', [ConsultaDocumentoController::class, 'consultarRuc']);
 
         // Reporte de deudas (módulo 9)
         Route::middleware('permiso:9')->group(function () {
