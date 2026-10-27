@@ -80,15 +80,30 @@ class ReporteController extends Controller
     public function deudas(Request $request)
     {
         $per_page = $request->get('per_page', 15);
-
-        $this->aplicarScopeSocio($request);
-
         $query = Deuda::query();
-        if ($request->has('id_puesto') && $request->id_puesto != '') {
+
+        if ($this->esSocio($request)) {
+            $idSocio = $this->idSocioAutenticado($request);
+
+            if ($idSocio === null) {
+                return response()->json(['message' => 'No se encontró un socio vinculado a la cuenta.'], 403);
+            }
+
+            if ($request->filled('id_puesto')) {
+                if (! $this->verificarPuestoDelSocio($request)) {
+                    return response()->json(['message' => 'No tiene permiso para consultar este puesto.'], 403);
+                }
+
+                $query->where('id_puesto', $request->id_puesto);
+            } else {
+                $query->where('id_socio', $idSocio);
+            }
+        } elseif ($request->filled('id_puesto')) {
             $query->where('id_puesto', $request->id_puesto);
-        }
-        if ($request->has('id_socio') && $request->id_socio != '') {
+        } elseif ($request->filled('id_socio')) {
             $query->where('id_socio', $request->id_socio);
+        } else {
+            return response()->json(['message' => 'Debe seleccionar un puesto o socio.'], 422);
         }
 
         $paginate = $query->paginate($per_page);

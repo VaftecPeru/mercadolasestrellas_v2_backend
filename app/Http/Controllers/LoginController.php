@@ -61,26 +61,22 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'usuario' => 'required',
-        ], [
-            'usuario.required' => 'El usuario es requerido.',
-        ]);
+        $token = $request->bearerToken() ?? $request->input('token');
 
-        if ($validator->fails()) {
-            return response()->json(['error' => $validator->errors()->first()], 400);
+        if (! $token) {
+            return response()->json(['error' => 'El token es requerido.'], 400);
         }
 
-        $usuario = Usuario::where('nombre_usuario', $request->input('usuario'))->first();
+        $usuario = Usuario::where('token', $token)->first();
 
         if (! $usuario) {
-            return response()->json(['message' => 'Ocurrio un error al cerrar sesión.'], 400);
+            return response()->json(['message' => 'Token inválido o expirado.'], 401);
         }
 
         $usuario->token = null;
         $usuario->save();
 
-        return response()->json(['message' => 'Salio del sistema correctamente.'], 200);
+        return response()->json(['message' => 'Salió del sistema correctamente.'], 200);
     }
 
     public function validaciones(Request $request)
@@ -91,11 +87,18 @@ class LoginController extends Controller
             return response()->json(['error' => 'El token es requerido.'], 400);
         }
 
-        $usuario = Usuario::select('id_usuario', 'nombre_usuario', 'estado', 'id_rol', 'debe_cambiar_password')
-            ->where('token', $token)->first();
+        $usuario = Usuario::where('token', $token)->first();
 
         if (! $usuario) {
             return response()->json(['message' => 'Token inválido o expirado. No se pudo validar el acceso.'], 401);
+        }
+
+        if ($usuario->bloqueado) {
+            return response()->json(['message' => 'Su cuenta está bloqueada.'], 403);
+        }
+
+        if ($usuario->estado !== '1') {
+            return response()->json(['message' => 'Su cuenta está desactivada.'], 403);
         }
 
         return response()->json($this->usuarioPayload($usuario), 200);

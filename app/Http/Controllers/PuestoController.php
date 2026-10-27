@@ -75,11 +75,25 @@ class PuestoController extends Controller
         return response()->json($puestos);
     }
 
-    // public function seleccionarPuesto()
-    // {
-    //     $puestos = Puesto::select('id_puesto', 'numero_puesto')->get();
-    //     return response()->json($puestos);
-    // }
+    public function seleccionarPuesto(Request $request)
+    {
+        $this->aplicarScopeSocio($request);
+
+        $query = Puesto::select('id_puesto', 'id_socio', 'numero_puesto')
+            ->where('activo', true);
+
+        if ($request->filled('id_socio')) {
+            $query->where('id_socio', $request->id_socio);
+        }
+
+        $puestos = $query
+            ->orderByRaw('REGEXP_SUBSTR(numero_puesto, "^[^0-9]*") asc')
+            ->orderByRaw('CAST(REGEXP_SUBSTR(numero_puesto, "[0-9]+") AS UNSIGNED) asc')
+            ->orderBy('numero_puesto')
+            ->get();
+
+        return response()->json($puestos);
+    }
 
     public function obtenerTotalPuestos()
     {

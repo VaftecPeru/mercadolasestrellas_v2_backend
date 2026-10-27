@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Banco;
 use App\Models\BancoCuenta;
 use App\Models\Modulo;
-use App\Models\Usuario;
 
 class SetupController extends Controller
 {
@@ -54,11 +53,12 @@ class SetupController extends Controller
 
     public function indexModuloWeb(Request $request)
     {
-        $id_usuario = $request->id_usuario ?? "";
-        $usuario = Usuario::find($id_usuario);
-        if(!$usuario) {
-            return [];
+        $usuario = $request->attributes->get('usuario');
+
+        if (! $usuario) {
+            return response()->json(['message' => 'No autenticado.'], 401);
         }
+
         $id_rol = $usuario->id_rol;
 
         $modulos = Modulo::select(

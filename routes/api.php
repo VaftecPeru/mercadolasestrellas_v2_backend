@@ -31,12 +31,6 @@ Route::group(['prefix' => 'v1'], function () {
     Route::post('/cambiar-password', [LoginController::class, 'cambiarPassword']);
     Route::get('/validaciones', [LoginController::class, 'validaciones']);
 
-    // Búsqueda rápida de puesto (público)
-    Route::get('/puestos/seleccionar', [PuestoController::class, 'seleccionarPuesto']);
-    Route::get('/reportes/deudas', [ReporteController::class, 'deudas']);
-    Route::get('/reporte-deudas/exportar', [ReporteController::class, 'exportReporteDeudas']);
-    Route::get('/reporte-deudas/exportar-pdf', [ReporteController::class, 'exportReporteDeudasPDF']);
-
     // ---------------------------------------------------------------------
     // Autenticado (cualquier rol activo) — lookups compartidos y lecturas
     // con scoping para el Socio
@@ -44,37 +38,49 @@ Route::group(['prefix' => 'v1'], function () {
     Route::middleware('auth.token')->group(function () {
         Route::get('/blocks', [BlockController::class, 'index']);
         Route::get('/giro-negocios', [GiroNegocioController::class, 'index']);
-        Route::get('/inquilinos', [InquilinoController::class, 'index']);
+        // Datos operativos sensibles: solo módulos que realmente los utilizan.
+        Route::get('/inquilinos', [InquilinoController::class, 'index'])->middleware('permiso:4');
 
-        Route::get('/setup/bancos', [SetupController::class, 'indexBanco']);
-        Route::get('/setup/banco-cuentas', [SetupController::class, 'indexBancoCuenta']);
+        Route::get('/setup/bancos', [SetupController::class, 'indexBanco'])->middleware('permiso:7');
+        Route::get('/setup/banco-cuentas', [SetupController::class, 'indexBancoCuenta'])->middleware('permiso:7');
         Route::get('/setup/modulos-web', [SetupController::class, 'indexModuloWeb']);
 
+        Route::get('/puestos/seleccionar', [PuestoController::class, 'seleccionarPuesto']);
         Route::get('/socios/seleccionar', [SocioController::class, 'seleccionarSocio']);
         Route::get('/puestos', [PuestoController::class, 'index']);
-        Route::get('/puestos/sin-socio', [PuestoController::class, 'puestosSinSocio']);
-        Route::get('/puestos/sin-inquilino', [PuestoController::class, 'puestosSinInquilino']);
+        Route::get('/puestos/sin-socio', [PuestoController::class, 'puestosSinSocio'])->middleware('permiso:4');
+        Route::get('/puestos/sin-inquilino', [PuestoController::class, 'puestosSinInquilino'])->middleware('permiso:4');
 
         Route::get('/servicios/multa-inasistencia', [ServicioController::class, 'consultarImporteMultaInasistencia']);
         Route::get('/servicios/consultar-importe-multa-inasistencia', [ServicioController::class, 'consultarImporteMultaInasistencia']);
 
-        // Consultas de Identidad y Empresas (RENIEC / SUNAT)
+      
+      
+         // Consultas de Identidad y Empresas (RENIEC / SUNAT)
         Route::get('/consultas/dni/{numero}', [ConsultaDocumentoController::class, 'consultarDni']);
         Route::get('/consultas/ruc/{numero}', [ConsultaDocumentoController::class, 'consultarRuc']);
+      
+        // Listado general de deudas: uso operativo exclusivo del módulo Pagos.
+        // Los reportes del Socio utilizan endpoints específicos con scoping por cuenta autenticada.
+        Route::get('/deudas', [DeudaController::class, 'index'])->middleware('permiso:7');
+        Route::get('/deudas/pendientes', [DeudaController::class, 'deudaPendientes'])->middleware('permiso:7,9');
 
-        // Reporte de deudas (módulo 9)
-        Route::middleware('permiso:9')->group(function () {
-            Route::get('/deudas', [DeudaController::class, 'index']);
-            Route::get('/deudas/pendientes', [DeudaController::class, 'deudaPendientes']);
-            Route::get('/reportes/deudas/exportar', [ReporteController::class, 'exportReporteDeudas']);
-            Route::get('/reportes/deudas/exportar-pdf', [ReporteController::class, 'exportReporteDeudasPDF']);
-        });
-
-        // Reporte de pagos (módulo 8) — accesible también desde pestaña Pagos de Reporte Deudas (módulo 9)
-        Route::middleware('permiso:8,9')->group(function () {
+        // Reporte de pagos (módulo 8)
+        Route::middleware('permiso:8')->group(function () {
             Route::get('/reportes/pagos', [ReporteController::class, 'pagos']);
             Route::get('/reportes/pagos/exportar', [ReporteController::class, 'exportReportePagos']);
             Route::get('/reportes/pagos/exportar-pdf', [ReporteController::class, 'exportReportePagosPDF']);
+        });
+
+        // Reporte de deudas (módulo 9)
+        Route::middleware('permiso:9')->group(function () {
+            Route::get('/reportes/deudas', [ReporteController::class, 'deudas']);
+            Route::get('/reportes/deudas/exportar', [ReporteController::class, 'exportReporteDeudas']);
+            Route::get('/reportes/deudas/exportar-pdf', [ReporteController::class, 'exportReporteDeudasPDF']);
+
+            // Alias legado usado por versiones antiguas del frontend.
+            Route::get('/reporte-deudas/exportar', [ReporteController::class, 'exportReporteDeudas']);
+            Route::get('/reporte-deudas/exportar-pdf', [ReporteController::class, 'exportReporteDeudasPDF']);
         });
 
         // Dashboard (Panel de Control — módulo 1)

@@ -25,9 +25,27 @@ class DeudaController extends Controller
      */
     public function index(Request $request)
     {
+        // Defensa en profundidad: si este endpoint vuelve a ser habilitado para Socio
+        // en el futuro, nunca debe devolver deudas de otra cuenta.
+        $this->aplicarScopeSocio($request);
+
         $filter = new DeudaFilter;
         $queryItems = $filter->transform($request);
-        $deudas = Deuda::where($queryItems)->paginate();
+        $query = Deuda::where($queryItems);
+
+        if ($this->esSocio($request)) {
+            $idSocio = $this->idSocioAutenticado($request);
+
+            if ($idSocio === null) {
+                return response()->json([
+                    'message' => 'No se encontró un socio vinculado a la cuenta.',
+                ], 403);
+            }
+
+            $query->where('id_socio', $idSocio);
+        }
+
+        $deudas = $query->paginate();
 
         return new DeudaCollection($deudas->appends($request->query()));
     }

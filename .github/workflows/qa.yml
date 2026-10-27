@@ -1,0 +1,55 @@
+name: QA Backend
+
+on:
+  push:
+    branches:
+      - main
+      - release/qa-main-2026-10-05
+  pull_request:
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+
+    env:
+      APP_ENV: testing
+      APP_DEBUG: false
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo_mysql
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Validate Composer
+        run: composer validate --no-check-publish
+
+      - name: Prepare Laravel
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan config:clear
+
+      - name: Validate PHP syntax
+        run: find app routes database/migrations tests -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Validate routes
+        run: php artisan route:list
+
+      - name: Run tests
+        run: php artisan test
+
+      - name: Document migration baseline limitation
+        run: |
+          echo "La BD histórica del proyecto contiene estructuras que aún no están representadas íntegramente por migrations."
+          echo "Por seguridad, migrate:fresh no se usa como gate de release hasta normalizar el baseline del esquema."
