@@ -37,6 +37,8 @@
       text-align: center;
       margin-top: 20px;
     }
+
+    .right { text-align: right; }
   </style>
 </head>
 <body>
@@ -54,11 +56,11 @@
     <tbody>
       @foreach($servicios as $servicio)
         <tr>
-          <td>{{ $servicio['id'] }}</td>
+          <td align="center">{{ $servicio['id'] }}</td>
           <td>{{ $servicio['nombre'] }}</td>
-          <td>{{ $servicio['costo_unitario'] }}</td>
-          <td>{{ $servicio['tipo_servicio'] }}</td>
-          <td>{{ $servicio['fecha_registro'] }}</td>
+          <td class="right">{{ is_numeric($servicio['costo_unitario']) ? 'S/ ' . number_format($servicio['costo_unitario'], 2) : $servicio['costo_unitario'] }}</td>
+          <td align="center">{{ $servicio['tipo_servicio'] }}</td>
+          <td align="center">{{ $servicio['fecha_registro'] }}</td>
         </tr>
       @endforeach
     </tbody>

@@ -37,6 +37,8 @@
       text-align: center;
       margin-top: 20px;
     }
+
+    .right { text-align: right; }
   </style>
 </head>
 <body>
@@ -57,14 +59,14 @@
     <tbody>
       @foreach($puestos as $puesto)
         <tr>
-          <td>{{ $puesto['bloque'] }}</td>
-          <td>{{ $puesto['puesto'] }}</td>
-          <td>{{ $puesto['area'] }}</td>
+          <td align="center">{{ $puesto['bloque'] }}</td>
+          <td align="center">{{ $puesto['puesto'] }}</td>
+          <td class="right">{{ $puesto['area'] }}</td>
           <td>{{ $puesto['giro'] }}</td>
           <td>{{ $puesto['socio'] }}</td>
           <td>{{ $puesto['inquilino'] }}</td>
-          <td>{{ $puesto['estado'] }}</td>
-          <td>{{ $puesto['fecha_registro'] }}</td>
+          <td align="center">{{ $puesto['estado'] }}</td>
+          <td align="center">{{ $puesto['fecha_registro'] }}</td>
         </tr>
       @endforeach
     </tbody>
