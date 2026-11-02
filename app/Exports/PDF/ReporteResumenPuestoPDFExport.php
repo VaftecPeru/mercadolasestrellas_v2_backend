@@ -13,12 +13,12 @@ class ReporteResumenPuestoPDFExport
     public function generatePDF($id_puesto)
     {
 
-        $puesto = Puesto::find($id_puesto);
-        $nombre_socio = $puesto->socio->persona->nombre_completo;
-        $nombre_bloque = $puesto->block ? $puesto->block->nombre : '-';
-        $numero_puesto = $puesto->numero_puesto;
-        $area = $puesto->area;
-        $giro_negocio = $puesto->gironegocio ? $puesto->gironegocio->nombre : '-';
+        $puesto = Puesto::with(['socio.persona', 'block', 'gironegocio'])->find($id_puesto);
+        $nombre_socio = $puesto && $puesto->socio && $puesto->socio->persona ? $puesto->socio->persona->nombre_completo : '-';
+        $nombre_bloque = $puesto && $puesto->block ? $puesto->block->nombre : '-';
+        $numero_puesto = $puesto->numero_puesto ?? '-';
+        $area = $puesto->area ?? '-';
+        $giro_negocio = $puesto && $puesto->gironegocio ? $puesto->gironegocio->nombre : '-';
 
         $pagos = ReporteResumen::query($id_puesto)
             ->get()

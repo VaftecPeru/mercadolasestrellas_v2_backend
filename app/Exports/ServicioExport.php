@@ -4,11 +4,13 @@ namespace App\Exports;
 
 use App\Models\Servicio;
 use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class ServicioExport implements FromCollection, WithHeadings, WithStyles
+class ServicioExport implements FromCollection, WithColumnFormatting, WithHeadings, WithStyles
 {
     /**
      * @return \Illuminate\Support\Collection
@@ -20,7 +22,7 @@ class ServicioExport implements FromCollection, WithHeadings, WithStyles
                 'id' => $servicio->id_servicio ?? '------',
                 'nombre' => $servicio->nombre ?? '------',
                 'costo_unitario' => $servicio->costo_unitario ?? '------',
-                'tipo_servicio' => $servicio->tipo_servicio === 4 ? 'Cuota Extraordinaria' : ($servicio->tipo_servicio === 3 ? 'Servicio por metros cuadrados' : ($servicio->tipo_servicio === 2 ? 'Extraordinario' : 'Ordinario')),
+                'tipo_servicio' => Servicio::nombreTipoServicio($servicio->tipo_servicio),
                 'fecha_registro' => $servicio->fecha_registro ? \Carbon\Carbon::parse($servicio->fecha_registro)->format('Y-m-d') : '------',
             ];
         });
@@ -34,6 +36,13 @@ class ServicioExport implements FromCollection, WithHeadings, WithStyles
             'Costo Unitario',
             'Tipo de Servicio',
             'Fecha Registro',
+        ];
+    }
+
+    public function columnFormats(): array
+    {
+        return [
+            'C' => NumberFormat::FORMAT_NUMBER_00,
         ];
     }
 

@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'decolecta' => [
+        'base_url' => env('DECOLECTA_BASE_URL', 'https://api.decolecta.com/v1'),
+        'token' => env('DECOLECTA_TOKEN'),
+        'timeout' => (int) env('DECOLECTA_TIMEOUT', 5),
+    ],
+
 ];

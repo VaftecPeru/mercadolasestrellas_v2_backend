@@ -28,6 +28,7 @@ class ReportePagoResource extends JsonResource
                 ->select(
                     'detalle_pagos.importe',
                     'servicios.nombre as descripcion',
+                    'servicios.tipo_servicio',
                     'puestos.numero_puesto as puesto'
                 )
                 ->where('detalle_pagos.id_pago', $this->id_pago);
@@ -48,6 +49,7 @@ class ReportePagoResource extends JsonResource
                     return [
                         'importe' => number_format($d->importe, 2, '.', ''),
                         'descripcion' => $d->descripcion ?? 'Servicio/Aporte',
+                        'tipo_servicio' => $d->tipo_servicio,
                         'puesto' => $d->puesto ?? '',
                     ];
                 }),
