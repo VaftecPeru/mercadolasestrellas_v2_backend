@@ -18,11 +18,154 @@ class UsuarioService
     public const ID_ROL_CAJERO = 3;
 
     /**
+     * Lista de contraseñas predeterminadas o débiles prohibidas para el acceso inicial.
+     */
+    public const CONTRASENIAS_PROHIBIDAS = [
+        'password',
+        '123456',
+        '12345678',
+        '123456789',
+        'admin',
+        'admin123',
+        'administrador',
+        'qwerty',
+        'mercado',
+        'mercado123',
+    ];
+
+    /**
      * Genera una contraseña temporal aleatoria (solo texto plano, nunca almacenada así).
      */
-    public function generarContraseniaTemporal(): string
+    public function generarContraseniaTemporal(int $longitud = 10): string
     {
-        return Str::random(10);
+        return Str::random(max(10, $longitud));
+    }
+
+    /**
+     * Verifica si ya existe al menos un administrador activo y no bloqueado en el sistema.
+     */
+    public function existeAdministradorActivo(): bool
+    {
+        return Usuario::where('id_rol', self::ID_ROL_ADMINISTRADOR)
+            ->where('estado', '1')
+            ->where('bloqueado', 0)
+            ->exists();
+    }
+
+    /**
+     * Valida que una contraseña inicial no sea una credencial predeterminada o trivial.
+     */
+    public function validarContraseniaSegura(string $password, string $nombreUsuario = '', string $dni = ''): void
+    {
+        $limpia = trim($password);
+
+        if (strlen($limpia) < 8) {
+            throw new \InvalidArgumentException('La contraseña debe tener al menos 8 caracteres.');
+        }
+
+        $normalizada = strtolower($limpia);
+
+        if (in_array($normalizada, self::CONTRASENIAS_PROHIBIDAS, true)) {
+            throw new \InvalidArgumentException('No se permite el uso de contraseñas predeterminadas o débiles (como "password" o "admin").');
+        }
+
+        if ($nombreUsuario !== '' && $normalizada === strtolower(trim($nombreUsuario))) {
+            throw new \InvalidArgumentException('La contraseña no puede ser igual al nombre de usuario.');
+        }
+
+        if ($dni !== '' && $limpia === trim($dni)) {
+            throw new \InvalidArgumentException('La contraseña no puede ser igual al número de DNI.');
+        }
+    }
+
+    /**
+     * Aprovisiona de forma segura el administrador inicial del sistema cuando
+     * la base de datos se despliega en limpio sin credenciales predeterminadas.
+     *
+     * @param  array  $datos  nombre_usuario, nombre, apellido_paterno, apellido_materno, dni, correo, telefono, direccion, sexo
+     * @return array{usuario: Usuario, persona: Persona, password_inicial: string, password_autogenerado: bool}
+     */
+    public function crearAdministradorInicial(
+        array $datos,
+        ?string $passwordPersonalizada = null,
+        bool $forzarCambioPassword = true
+    ): array {
+        if ($this->existeAdministradorActivo()) {
+            throw new \RuntimeException(
+                'Ya existe un administrador activo en el sistema. Gestione cuentas adicionales desde el módulo Usuarios y Roles.'
+            );
+        }
+
+        $nombreUsuario = trim((string) ($datos['nombre_usuario'] ?? ''));
+        $dni = trim((string) ($datos['dni'] ?? ''));
+        $telefono = trim((string) ($datos['telefono'] ?? ''));
+
+        if ($nombreUsuario === '' || strlen($nombreUsuario) < 3) {
+            throw new \InvalidArgumentException('El nombre de usuario del administrador debe tener al menos 3 caracteres.');
+        }
+
+        if (! $this->esDniValido($dni)) {
+            throw new \InvalidArgumentException('El DNI del administrador debe tener exactamente 8 dígitos numéricos.');
+        }
+
+        if (preg_match('/^\d{9}$/', $telefono) !== 1) {
+            throw new \InvalidArgumentException('El teléfono del administrador debe tener exactamente 9 dígitos numéricos.');
+        }
+
+        foreach (['nombre', 'apellido_paterno', 'apellido_materno', 'correo'] as $campoRequerido) {
+            if (trim((string) ($datos[$campoRequerido] ?? '')) === '') {
+                throw new \InvalidArgumentException("El campo {$campoRequerido} es obligatorio para el administrador inicial.");
+            }
+        }
+
+        if (Usuario::where('nombre_usuario', $nombreUsuario)->exists()) {
+            throw new \InvalidArgumentException('El nombre de usuario ya está registrado.');
+        }
+
+        if (Persona::where('dni', $dni)->exists()) {
+            throw new \InvalidArgumentException('El DNI ya está registrado.');
+        }
+
+        $passwordAutogenerado = $passwordPersonalizada === null || trim($passwordPersonalizada) === '';
+        if ($passwordAutogenerado) {
+            $passwordFinal = $this->generarContraseniaTemporal(12);
+            $debeCambiar = true;
+        } else {
+            $passwordFinal = trim($passwordPersonalizada);
+            $this->validarContraseniaSegura($passwordFinal, $nombreUsuario, $dni);
+            $debeCambiar = $forzarCambioPassword;
+        }
+
+        return DB::transaction(function () use ($datos, $nombreUsuario, $dni, $telefono, $passwordFinal, $debeCambiar, $passwordAutogenerado) {
+            $datosNormalizados = array_merge($datos, [
+                'dni' => $dni,
+                'telefono' => $telefono,
+                'direccion' => trim((string) ($datos['direccion'] ?? '')) ?: 'Mercado Las Estrellas',
+                'sexo' => in_array((string) ($datos['sexo'] ?? '1'), ['1', '2'], true) ? (string) $datos['sexo'] : '1',
+                'estado' => '1',
+                'fecha_registro' => $datos['fecha_registro'] ?? now(),
+            ]);
+
+            $persona = $this->crearPersona($datosNormalizados);
+
+            $usuario = new Usuario;
+            $usuario->nombre_usuario = $nombreUsuario;
+            $usuario->id_persona = $persona->id_persona;
+            $usuario->contrasenia = Hash::make($passwordFinal);
+            $usuario->id_rol = self::ID_ROL_ADMINISTRADOR;
+            $usuario->estado = '1';
+            $usuario->debe_cambiar_password = $debeCambiar;
+            $usuario->bloqueado = false;
+            $usuario->fecha_registro = $datosNormalizados['fecha_registro'];
+            $usuario->save();
+
+            return [
+                'usuario' => $usuario,
+                'persona' => $persona,
+                'password_inicial' => $passwordFinal,
+                'password_autogenerado' => $passwordAutogenerado,
+            ];
+        });
     }
 
     /**
@@ -201,7 +344,6 @@ class UsuarioService
             return $usuario;
         });
     }
-
 
     public function actualizarTelefono(Usuario $usuario, string $telefono): Persona
     {

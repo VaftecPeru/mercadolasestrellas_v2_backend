@@ -82,7 +82,8 @@ return new class extends Migration
                 ['id_modulo' => 9, 'nombre' => 'Reporte Deudas', 'url' => '/home/reporte-deudas', 'url_foco' => 'reporte-deudas', 'url_activa' => '1', 'icon' => 'Description', 'estado' => '1', 'id_modulo_parent' => 2, 'orden' => 2002],
                 ['id_modulo' => 10, 'nombre' => 'Reporte de cuotas por metrado', 'url' => '/home/reporte-cuotas-metrado', 'url_foco' => 'reporte-cuotas-metrado', 'url_activa' => '1', 'icon' => 'Description', 'estado' => '1', 'id_modulo_parent' => 2, 'orden' => 2003],
                 ['id_modulo' => 11, 'nombre' => 'Reporte de cuotas por puestos', 'url' => '/home/reporte-cuotas-puesto', 'url_foco' => 'reporte-cuotas-puesto', 'url_activa' => '1', 'icon' => 'Description', 'estado' => '1', 'id_modulo_parent' => 2, 'orden' => 2004],
-                ['id_modulo' => 12, 'nombre' => 'Reporte resumen por puesto', 'url' => '/home/reporte-resumen-puesto', 'url_foco' => 'reporte-resumen-puesto', 'url_activa' => '1', 'icon' => 'Description', 'estado' => '1', 'id_modulo_parent' => 2, 'orden' => 2005],
+                ['id_modulo' => 12, 'nombre' => 'Reporte de resumen', 'url' => '/home/reporte-resumen', 'url_foco' => 'reporte-resumen', 'url_activa' => '1', 'icon' => 'Description', 'estado' => '1', 'id_modulo_parent' => 2, 'orden' => 2005],
+                ['id_modulo' => 13, 'nombre' => 'Usuarios y Roles', 'url' => '/home/usuarios', 'url_foco' => 'usuarios', 'url_activa' => '1', 'icon' => 'ManageAccounts', 'estado' => '1', 'id_modulo_parent' => 1, 'orden' => 1006],
             ]);
         }
 
@@ -94,6 +95,21 @@ return new class extends Migration
                 $table->primary(['id_rol', 'id_modulo']);
                 $table->index('id_modulo', 'rolmodulo_modulo_fk');
             });
+        }
+
+        if (Schema::hasTable('rol_modulo') && DB::table('rol_modulo')->count() === 0) {
+            $permisosBase = [
+                1 => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+                2 => [2, 8, 9],
+                3 => [1, 2, 3, 7, 8, 9, 10, 11, 12],
+            ];
+            $filasPermisos = [];
+            foreach ($permisosBase as $idRol => $modulos) {
+                foreach ($modulos as $idModulo) {
+                    $filasPermisos[] = ['id_rol' => $idRol, 'id_modulo' => $idModulo];
+                }
+            }
+            DB::table('rol_modulo')->insert($filasPermisos);
         }
 
         // 5. banco
@@ -198,4 +214,3 @@ return new class extends Migration
         Schema::dropIfExists('personas');
     }
 };
-
