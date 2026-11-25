@@ -4,11 +4,13 @@ namespace App\Exports;
 
 use App\Models\Cuota;
 use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class CuotaExport implements FromCollection, WithHeadings, WithStyles
+class CuotaExport implements FromCollection, WithColumnFormatting, WithHeadings, WithStyles
 {
     /**
      * @return \Illuminate\Support\Collection
@@ -38,7 +40,7 @@ class CuotaExport implements FromCollection, WithHeadings, WithStyles
                 'id' => $cuota->id_cuota ?? '------',
                 'fecha_emision' => $cuota->fecha_emision ? \Carbon\Carbon::parse($cuota->fecha_emision)->format('Y-m-d') : '------',
                 'fecha_vencimiento' => $cuota->fecha_vencimiento ? \Carbon\Carbon::parse($cuota->fecha_vencimiento)->format('Y-m-d') : '------',
-                'importe' => $cuota->importe ?? '------',
+                'importe' => is_numeric($cuota->importe) ? (float) $cuota->importe : ($cuota->importe ?? '------'),
                 'puestos' => $puestosAsignados,
                 'servicios' => $servicios,
             ];
@@ -54,6 +56,13 @@ class CuotaExport implements FromCollection, WithHeadings, WithStyles
             'Importe',
             'Puestos Asignados',
             'Servicios',
+        ];
+    }
+
+    public function columnFormats(): array
+    {
+        return [
+            'D' => NumberFormat::FORMAT_NUMBER_00,
         ];
     }
 

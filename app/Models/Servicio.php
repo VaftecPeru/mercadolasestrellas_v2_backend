@@ -10,7 +10,9 @@ class Servicio extends Model
     use HasFactory;
 
     protected $table = 'servicios';
+
     protected $primaryKey = 'id_servicio';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -18,11 +20,22 @@ class Servicio extends Model
         'costo_unitario',
         'tipo_servicio',
         'fecha_registro',
-        'activo'
+        'activo',
     ];
 
     public function cuotaServicios()
     {
         return $this->hasMany(CuotaServicios::class, 'id_servicio');
+    }
+
+    public static function nombreTipoServicio($tipo): string
+    {
+        return match ((string) $tipo) {
+            '1' => 'Ordinario',
+            '2' => 'Extraordinario',
+            '3' => 'Por metro cuadrado',
+            '4' => 'Cuota Extraordinaria',
+            default => '-',
+        };
     }
 }

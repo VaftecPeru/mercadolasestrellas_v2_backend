@@ -62,6 +62,7 @@
       <tr>
         <th>Fecha Pago</th>
         <th>Servicios</th>
+        <th>Tipo de Servicio</th>
         <th>Total (S/.)</th>
         <th>Imp. Pagado (S/.)</th>
         <th>Imp. Por pagar (S/.)</th>
@@ -72,6 +73,7 @@
         <tr>
           <td align="center">{{ $deuda['fecha'] }}</td>
           <td>{{ $deuda['servicio_descripcion'] }}</td>
+          <td align="center">{{ $deuda['tipo_servicio'] ?? '-' }}</td>
           <td class="right">S/ {{ number_format($deuda['total'], 2) }}</td>
           <td class="right">S/ {{ number_format($deuda['importe_pagado'], 2) }}</td>
           <td class="right">S/ {{ number_format($deuda['importe_por_pagar'], 2) }}</td>
@@ -80,7 +82,7 @@
     </tbody>
     <tfoot>
       <tr>
-        <th colspan="2" class="right">Total (S/.)</th>
+        <th colspan="3" class="right">Total (S/.)</th>
         <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total, 2) }}</th>
         <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_pagado, 2) }}</th>
         <th class="right" style="background-color: #e3f2fd;">S/ {{ number_format($total_importe_por_pagar, 2) }}</th>

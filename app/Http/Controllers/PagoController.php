@@ -12,6 +12,8 @@ use App\Models\DeudaCuota;
 use App\Models\Documento;
 use App\Models\Pago;
 use App\Models\PagoBanco;
+use App\Support\FiltroTexto;
+use App\Support\ScopeSocio;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +22,8 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class PagoController extends Controller
 {
+    use ScopeSocio;
+
     public function index(Request $request)
     {
         $per_page = 15;
@@ -28,18 +32,26 @@ class PagoController extends Controller
             $per_page = $request->per_page;
         }
 
+        $this->aplicarScopeSocio($request);
+
         $paginate = Pago::with(['socio.persona']) // Cargar relaciones para evitar N+1
             ->select('pagos.*')
             ->join('socios', 'pagos.id_socio', 'socios.id_socio')
             ->join('personas', 'socios.id_socio', 'personas.id_persona')
             ->orderBy('pagos.fecha_registro', 'desc');
 
-        // Filtro de búsqueda por nombre del socio
-        if (isset($request->search) && ! empty($request->search)) {
-            $texto = strtr(utf8_decode($request->search), utf8_decode('àáâãäçèéêëìíîïñòóôõöùúûüýÿÀÁÂÃÄÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ'), 'aaaaaceeeeiiiinooooouuuuyyAAAAACEEEEIIIINOOOOOUUUUY');
-            $texto = strtr(utf8_decode($texto), utf8_decode('àáâãäçèéêëìíîïññòóôõöùúûüýÿÀÁÂÃÄÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ'), 'aaaaaceeeeiiiin?ooooouuuuyyAAAAACEEEEIIIINOOOOOUUUUY');
-            $texto = str_replace(' ', '%', $texto);
-            $paginate->whereRaw('upper(personas.nombre_completo) LIKE upper(?)', ['%'.$texto.'%']);
+        if ($request->filled('id_socio')) {
+            $paginate->where('pagos.id_socio', $request->id_socio);
+        }
+
+        // Filtro de búsqueda por nombre del socio o DNI
+        $search = $request->get('search') ?? $request->get('buscar_texto');
+        if (! empty($search)) {
+            $texto = FiltroTexto::normalizarNombre($search);
+            $paginate->where(function ($q) use ($texto) {
+                $q->whereRaw('upper(personas.nombre_completo) LIKE upper(?)', ['%'.$texto.'%'])
+                    ->orWhere('personas.dni', 'LIKE', '%'.$texto.'%');
+            });
         }
 
         // Filtro por puesto (via detalle_pagos)
@@ -291,20 +303,24 @@ class PagoController extends Controller
 
     }
 
-    public function export()
+    public function export(Request $request)
     {
+        $this->aplicarScopeSocio($request);
 
-        return Excel::download(new PagosExport, 'pagos.xlsx');
+        $search = $request->get('search') ?? $request->get('buscar_texto');
 
+        return Excel::download(new PagosExport($request->id_puesto, $search, $request->id_socio), 'pagos.xlsx');
     }
 
-    public function exportPDF()
+    public function exportPDF(Request $request)
     {
+        $this->aplicarScopeSocio($request);
+
+        $search = $request->get('search') ?? $request->get('buscar_texto');
 
         $export = new PagosPDFExport;
 
-        return $export->generatePDF();
-
+        return $export->generatePDF($request->id_puesto, $search, $request->id_socio);
     }
 
     public function import(Request $request)

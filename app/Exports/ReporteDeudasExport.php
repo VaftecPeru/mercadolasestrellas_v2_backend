@@ -6,6 +6,8 @@ use App\Models\DetallePagos;
 use App\Models\Deuda;
 use App\Models\DeudaCuota;
 use App\Models\Puesto;
+use App\Models\Servicio;
+use App\Models\Socio;
 use App\Support\FiltroTexto;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
@@ -24,14 +26,17 @@ class ReporteDeudasExport implements FromCollection, WithColumnFormatting, WithE
 
     protected $nombre_socio;
 
+    protected $id_socio;
+
     protected $encabezado = ['-', '-', '-', '-', '-'];
 
     private $count = 0;
 
-    public function __construct($id_puesto, $nombre_socio = null)
+    public function __construct($id_puesto, $nombre_socio = null, $id_socio = null)
     {
         $this->id_puesto = $id_puesto;
         $this->nombre_socio = $nombre_socio;
+        $this->id_socio = $id_socio;
         $this->encabezado = $this->resolveEncabezado();
     }
 
@@ -39,19 +44,44 @@ class ReporteDeudasExport implements FromCollection, WithColumnFormatting, WithE
     {
         $default = ['-', '-', '-', '-', '-'];
 
-        $puesto = Puesto::with(['socio.persona', 'block', 'gironegocio'])->find($this->id_puesto);
+        if ($this->id_puesto) {
+            $puesto = Puesto::with(['socio.persona', 'block', 'gironegocio'])->find($this->id_puesto);
 
-        if (! $puesto) {
-            return $default;
+            if (! $puesto) {
+                return $default;
+            }
+
+            $nombreSocio = $puesto->socio && $puesto->socio->persona ? $puesto->socio->persona->nombre_completo : '-';
+            if ($nombreSocio === '-' && $this->id_socio) {
+                $socioObj = Socio::with('persona')->find($this->id_socio);
+                if ($socioObj && $socioObj->persona) {
+                    $nombreSocio = $socioObj->persona->nombre_completo;
+                }
+            }
+
+            return [
+                $nombreSocio,
+                $puesto->block ? $puesto->block->nombre : '-',
+                $puesto->numero_puesto ?? '-',
+                $puesto->area ?? '-',
+                $puesto->gironegocio ? $puesto->gironegocio->nombre : '-',
+            ];
         }
 
-        return [
-            $puesto->socio && $puesto->socio->persona ? $puesto->socio->persona->nombre_completo : '-',
-            $puesto->block ? $puesto->block->nombre : '-',
-            $puesto->numero_puesto ?? '-',
-            $puesto->area ?? '-',
-            $puesto->gironegocio ? $puesto->gironegocio->nombre : '-',
-        ];
+        if ($this->id_socio) {
+            $socio = Socio::with('persona')->find($this->id_socio);
+            if ($socio && $socio->persona) {
+                return [
+                    $socio->persona->nombre_completo,
+                    '-',
+                    '-',
+                    '-',
+                    '-',
+                ];
+            }
+        }
+
+        return $default;
     }
 
     public function collection()
@@ -60,20 +90,26 @@ class ReporteDeudasExport implements FromCollection, WithColumnFormatting, WithE
             ->when($this->id_puesto, function ($query) {
                 $query->where('id_puesto', $this->id_puesto);
             })
-            ->when($this->nombre_socio, function ($query) {
-                $texto = FiltroTexto::normalizarNombre($this->nombre_socio);
-                $query->whereHas('socio.persona', function ($q) use ($texto) {
-                    $q->whereRaw('upper(nombre_completo) LIKE upper(?)', ['%'.$texto.'%']);
+            // id_socio es el criterio autoritativo; el nombre solo se usa como respaldo
+            ->when($this->id_socio, function ($query) {
+                $query->where('id_socio', $this->id_socio);
+            }, function ($query) {
+                $query->when($this->nombre_socio, function ($query) {
+                    $texto = FiltroTexto::normalizarNombre($this->nombre_socio);
+                    $query->whereHas('socio.persona', function ($q) use ($texto) {
+                        $q->whereRaw('upper(nombre_completo) LIKE upper(?)', ['%'.$texto.'%']);
+                    });
                 });
             })
             ->get()
             ->map(function ($deuda) {
-                $deudaCuotas = DeudaCuota::select('c.nombre')
+                $deudaCuotas = DeudaCuota::select('c.nombre', 'c.tipo_servicio')
                     ->join('cuota_servicios as b', 'deuda_cuotas.id_cuota_servicio', 'b.id_cuota_servicio')
                     ->join('servicios as c', 'b.id_servicio', 'c.id_servicio')
                     ->where('deuda_cuotas.id_deuda', $deuda->id_deuda)
-                    ->groupBy('c.nombre')->get();
+                    ->groupBy('c.nombre', 'c.tipo_servicio')->get();
                 $servicio_nombres = implode(', ', $deudaCuotas->pluck('nombre')->toArray());
+                $tipo_servicios = implode(', ', $deudaCuotas->map(fn ($item) => Servicio::nombreTipoServicio($item->tipo_servicio))->unique()->toArray());
 
                 $importeSuma = DetallePagos::where('id_deuda', $deuda->id_deuda)->sum('importe');
                 $importe_pagado = $importeSuma ?? 0;
@@ -82,6 +118,7 @@ class ReporteDeudasExport implements FromCollection, WithColumnFormatting, WithE
                 return [
                     'fecha' => (new Carbon($deuda->fecha_registro))->format('Y-m-d'),
                     'servicio_descripcion' => $servicio_nombres,
+                    'tipo_servicio' => $tipo_servicios ?: '-',
                     'total' => $deuda->total_deuda,
                     'importe_pagado' => $importe_pagado ?? 0,
                     'importe_por_pagar' => $importe_por_pagar,
@@ -102,6 +139,7 @@ class ReporteDeudasExport implements FromCollection, WithColumnFormatting, WithE
         return [
             'Fecha Pago',
             'Servicios',
+            'Tipo de Servicio',
             'Total (S/.)',
             'Imp. Pagado (S/.)',
             'Imp. Por pagar (S/.)',
@@ -111,9 +149,9 @@ class ReporteDeudasExport implements FromCollection, WithColumnFormatting, WithE
     public function columnFormats(): array
     {
         return [
-            'C' => NumberFormat::FORMAT_NUMBER_00,
             'D' => NumberFormat::FORMAT_NUMBER_00,
             'E' => NumberFormat::FORMAT_NUMBER_00,
+            'F' => NumberFormat::FORMAT_NUMBER_00,
         ];
     }
 
@@ -121,7 +159,7 @@ class ReporteDeudasExport implements FromCollection, WithColumnFormatting, WithE
     {
         $sheet->getStyle(1)->getFont()->setBold(true);
 
-        foreach (range('A', 'E') as $column) {
+        foreach (range('A', 'F') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
     }
@@ -145,12 +183,12 @@ class ReporteDeudasExport implements FromCollection, WithColumnFormatting, WithE
                 if ($this->count > 0) {
                     $lastRow = $event->sheet->getHighestRow() + 1;
                     $event->sheet->setCellValue('A'.($lastRow), 'Total (S/.)');
-                    $event->sheet->mergeCells("A{$lastRow}:B{$lastRow}");
+                    $event->sheet->mergeCells("A{$lastRow}:C{$lastRow}");
                     $event->sheet->getStyle("A{$lastRow}")->getAlignment()->setHorizontal('right');
-                    $event->sheet->getStyle("A{$lastRow}:E{$lastRow}")->getFont()->setBold(true);
-                    $event->sheet->setCellValue('C'.($lastRow), '=SUM(C4:C'.($lastRow - 1).')');
+                    $event->sheet->getStyle("A{$lastRow}:F{$lastRow}")->getFont()->setBold(true);
                     $event->sheet->setCellValue('D'.($lastRow), '=SUM(D4:D'.($lastRow - 1).')');
                     $event->sheet->setCellValue('E'.($lastRow), '=SUM(E4:E'.($lastRow - 1).')');
+                    $event->sheet->setCellValue('F'.($lastRow), '=SUM(F4:F'.($lastRow - 1).')');
                 }
             },
         ];

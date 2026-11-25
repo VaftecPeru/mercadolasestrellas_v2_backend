@@ -32,6 +32,8 @@
       text-align: center;
       margin-top: 20px;
     }
+
+    .right { text-align: right; }
   </style>
 </head>
 <body>
@@ -50,10 +52,10 @@
     <tbody>
       @foreach($cuotas as $cuota)
         <tr>
-          <td style="text-align: center;">{{ $cuota['id'] }}</td>
-          <td style="text-align: center;">{{ $cuota['fecha_emision'] }}</td>
-          <td style="text-align: center;">{{ $cuota['fecha_vencimiento'] }}</td>
-          <td style="text-align: right;">{{ $cuota['importe'] }}</td>
+          <td align="center">{{ $cuota['id'] }}</td>
+          <td align="center">{{ $cuota['fecha_emision'] }}</td>
+          <td align="center">{{ $cuota['fecha_vencimiento'] }}</td>
+          <td class="right">{{ is_numeric($cuota['importe']) ? 'S/ ' . number_format($cuota['importe'], 2) : $cuota['importe'] }}</td>
           <td>{{ $cuota['puestos'] }}</td>
           <td>{{ $cuota['servicios'] }}</td>
         </tr>

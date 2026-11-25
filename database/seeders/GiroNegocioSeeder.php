@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class GiroNegocioSeeder extends Seeder
 {
@@ -12,6 +12,10 @@ class GiroNegocioSeeder extends Seeder
      */
     public function run(): void
     {
-        //
+        if (DB::table('giro_negocios')->count() === 0) {
+            DB::table('giro_negocios')->insert([
+                ['id_gironegocio' => 1, 'nombre' => 'Varios'],
+            ]);
+        }
     }
 }

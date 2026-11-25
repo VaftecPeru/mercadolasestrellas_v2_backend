@@ -44,6 +44,7 @@ trait ScopeSocio
         if ($socio) {
             return (int) $socio->id_socio;
         }
+
         return null;
     }
 

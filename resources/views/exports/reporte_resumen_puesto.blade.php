@@ -51,11 +51,12 @@
     <tbody>
       <tr>
         <td>{{ $nombre_socio }}</td>
-        <td>{{ $nombre_bloque }}</td>
-        <td>{{ $numero_puesto }}</td>
-        <td>{{ $area }}</td>
+        <td align="center">{{ $nombre_bloque }}</td>
+        <td align="center">{{ $numero_puesto }}</td>
+        <td align="center">{{ $area }}</td>
         <td>{{ $giro_negocio }}</td>
       </tr>
+    </tbody>
   </table>
   <table>
     <thead>
@@ -73,7 +74,7 @@
     <tbody>
       @foreach($pagos as $pago)
         <tr>
-          <td class="right">{{ $pago['numero_pago'] }}</td>
+          <td align="center">{{ $pago['numero_pago'] }}</td>
           <td class="right">S/ {{ number_format($pago['importe_ingreso'], 2) }}</td>
           <td class="right">S/ {{ number_format($pago['importe_gastos_administrativo'], 2) }}</td>
           <td class="right">S/ {{ number_format($pago['importe_otros_servicios'], 2) }}</td>

@@ -55,15 +55,15 @@
     <tbody>
       @foreach($pagos as $pago)
         <tr>
-          <td>{{ $pago['id'] }}</td>
-          <td>{{ $pago['numero_puesto'] }}</td>
+          <td align="center">{{ $pago['id'] }}</td>
+          <td align="center">{{ $pago['numero_puesto'] }}</td>
           <td>{{ $pago['socio'] }}</td>
-          <td>{{ $pago['dni'] }}</td>
-          <td>{{ $pago['fecha_registro'] }}</td>
-          <td>{{ $pago['telefono'] }}</td>
+          <td align="center">{{ $pago['dni'] }}</td>
+          <td align="center">{{ $pago['fecha_registro'] }}</td>
+          <td align="center">{{ $pago['telefono'] }}</td>
           <td>{{ $pago['correo'] }}</td>
-          <td>{{ $pago['a_cuenta'] }}</td>
-          <td>{{ $pago['monto_actual'] }}</td>
+          <td class="right">{{ is_numeric($pago['a_cuenta']) ? 'S/ ' . number_format($pago['a_cuenta'], 2) : $pago['a_cuenta'] }}</td>
+          <td class="right">{{ is_numeric($pago['monto_actual']) ? 'S/ ' . number_format($pago['monto_actual'], 2) : $pago['monto_actual'] }}</td>
         </tr>
       @endforeach
     </tbody>

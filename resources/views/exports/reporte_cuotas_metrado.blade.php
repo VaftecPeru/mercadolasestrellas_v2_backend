@@ -52,8 +52,8 @@
     </thead>
     <tbody>
       <tr>
-        <td>{{ $fecha_emision }}</td>
-        <td>{{ $fecha_vencimiento }}</td>
+        <td align="center">{{ $fecha_emision }}</td>
+        <td align="center">{{ $fecha_vencimiento }}</td>
       </tr>
     </tbody>
   </table>
@@ -72,9 +72,9 @@
     <tbody>
       @foreach($deudas as $deuda)
         <tr>
-          <td>{{ $deuda['fecha_registro'] }}</td>
+          <td align="center">{{ $deuda['fecha_registro'] }}</td>
           <td>{{ $deuda['nombre_completo'] }}</td>
-          <td>{{ $deuda['numero_puesto'] }}</td>
+          <td align="center">{{ $deuda['numero_puesto'] }}</td>
           <td class="right">{{ $deuda['area'] }}</td>
           <td class="right">S/ {{ number_format($deuda['total'], 2) }}</td>
           <td class="right">S/ {{ number_format($deuda['importe_pagado'], 2) }}</td>

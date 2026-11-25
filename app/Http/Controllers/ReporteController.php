@@ -42,11 +42,11 @@ class ReporteController extends Controller
             $query->whereHas('DetallePagos', function ($q) use ($request) {
                 $q->where('id_puesto', $request->id_puesto);
             });
-        } elseif ($request->has('id_socio') && $request->id_socio != '') {
-            $query->where('id_socio', $request->id_socio);
         }
 
-        if ($request->has('nombre_socio') && $request->nombre_socio != '') {
+        if ($request->has('id_socio') && $request->id_socio != '') {
+            $query->where('id_socio', $request->id_socio);
+        } elseif ($request->has('nombre_socio') && $request->nombre_socio != '') {
             $texto = FiltroTexto::normalizarNombre($request->nombre_socio);
             $query->whereHas('socio.persona', function ($q) use ($texto) {
                 $q->whereRaw('upper(nombre_completo) LIKE upper(?)', ['%'.$texto.'%']);
@@ -63,12 +63,9 @@ class ReporteController extends Controller
 
     public function exportReportePagos(Request $request)
     {
-
         $this->aplicarScopeSocio($request);
 
-        $filtro = $request->id_puesto ?? $request->id_socio;
-
-        return Excel::download(new ReportePagosExport($filtro), 'reporte_pagos.xlsx');
+        return Excel::download(new ReportePagosExport($request->id_puesto, $request->id_socio, $request->nombre_socio), 'reporte_pagos.xlsx');
     }
 
     public function exportReportePagosPDF(Request $request)
@@ -77,9 +74,7 @@ class ReporteController extends Controller
 
         $this->aplicarScopeSocio($request);
 
-        $filtro = $request->id_puesto ?? $request->id_socio;
-
-        return $export->generatePDF($filtro);
+        return $export->generatePDF($request->id_puesto, $request->id_socio, $request->nombre_socio);
     }
 
     public function deudas(Request $request)
@@ -118,22 +113,18 @@ class ReporteController extends Controller
 
     public function exportReporteDeudas(Request $request)
     {
-        if (! $this->verificarPuestoDelSocio($request)) {
-            return response()->json(['message' => 'No tiene permiso para realizar esta acción.'], 403);
-        }
+        $this->aplicarScopeSocio($request);
 
-        return Excel::download(new ReporteDeudasExport($request->id_puesto, $request->nombre_socio), 'reporte_deudas.xlsx');
+        return Excel::download(new ReporteDeudasExport($request->id_puesto, $request->nombre_socio, $request->id_socio), 'reporte_deudas.xlsx');
     }
 
     public function exportReporteDeudasPDF(Request $request)
     {
         $export = new ReporteDeudasPDFExport;
 
-        if (! $this->verificarPuestoDelSocio($request)) {
-            return response()->json(['message' => 'No tiene permiso para realizar esta acción.'], 403);
-        }
+        $this->aplicarScopeSocio($request);
 
-        return $export->generatePDF($request->id_puesto, $request->nombre_socio);
+        return $export->generatePDF($request->id_puesto, $request->nombre_socio, $request->id_socio);
     }
 
     public function cuotaPorMetros(Request $request)
